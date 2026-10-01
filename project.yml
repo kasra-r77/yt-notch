@@ -1,0 +1,67 @@
+# The Xcode project is generated from this file with XcodeGen. Edit this file, never the
+# generated YTNotch.xcodeproj (it is not committed).
+name: YTNotch
+
+options:
+  bundleIdPrefix: io.github.kasra-r77
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: YES
+    # Local builds are signed ad hoc. The release workflow (R5.1) signs with a Developer ID.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+
+packages:
+  YTNotchKit:
+    path: YTNotchKit
+
+targets:
+  YTNotch:
+    type: application
+    platform: macOS
+    sources:
+      - App
+    dependencies:
+      - package: YTNotchKit
+        product: PlayerCore
+      - package: YTNotchKit
+        product: WebPlayer
+      - package: YTNotchKit
+        product: NotchUI
+      - package: YTNotchKit
+        product: SystemMedia
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: YT Notch
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.music
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        LSUIElement: true
+        NSHumanReadableCopyright: Copyright © 2026 Kasra Rismanchi. MIT License.
+    settings:
+      base:
+        PRODUCT_NAME: YT Notch
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.kasra-r77.ytnotch
+        GENERATE_INFOPLIST_FILE: NO
+
+schemes:
+  YTNotch:
+    build:
+      targets:
+        YTNotch: all
+    run:
+      config: Debug
+    archive:
+      config: Release
