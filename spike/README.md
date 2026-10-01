@@ -17,7 +17,7 @@ The script builds with SwiftPM and wraps the binary in an ad hoc signed `.app` w
 - **Reload (⌘R)** and **Go to YouTube Music (⌘H)**
 - **Hide Player Window (⇧⌘H)**: moves the web view's window far off-screen and turns the spike into a menu bar app (S0.2). From then on, use the music-note icon in the menu bar to show the window again, play or pause, see the playback summary, or quit.
 - **Playback Summary…**: totals from the playback monitor.
-- **Check Bridge Sources (⌘B)**: runs the S0.3 check of Media Session and the video element. It plays muted, skips next and back, and leaves the player paused.
+- **Check Bridge Sources (⌘B)**: runs the S0.3 check of Media Session and the video element. It skips next and back and leaves the player paused. It is not reliably silent, because the site resets `muted`.
 - **Delete Website Data…**: signs the spike out by removing its own cookies and storage.
 
 The web view can be inspected: right-click the page and choose Inspect Element.
@@ -32,6 +32,8 @@ This prints the same cookie report without opening a window. It exits 0 when sig
 
 `--policy suspend|throttle|none` sets WebKit's inactive scheduling policy; the default is `none`.
 
+`--check-library` reads the sidebar's playlist list, starts the first playlist (Liked Music) by its address, and checks the queue, shuffle and repeat. It turns shuffle and repeat back off, holds media truly muted throughout, writes `~/Library/Logs/YTNotchSpike-library.json`, and quits.
+
 `--check-bridge` opens the spike, runs the bridge check 10 seconds after the page loads, writes `~/Library/Logs/YTNotchSpike-bridge.json`, and quits. Pass it with `open spike/build/YTNotchSpike.app --args --check-bridge`.
 
 ## Logs
@@ -39,3 +41,4 @@ This prints the same cookie report without opening a window. It exits 0 when sig
 - `~/Library/Logs/YTNotchSpike.log`: navigation, user actions and summaries.
 - `~/Library/Logs/YTNotchSpike-playback.csv`: one row every 5 seconds with the position, the pause state, stall checks and media event counts, plus rows for display sleep and wake and Space changes. Track titles are never written.
 - `~/Library/Logs/YTNotchSpike-bridge.json`: the latest bridge check. It holds presence, sizes and timings only.
+- `~/Library/Logs/YTNotchSpike-library.json`: the latest library check. It holds counts, structure, ID prefixes and button labels.

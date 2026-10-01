@@ -491,6 +491,233 @@ enum BridgeCheck {
     """
 }
 
+/// S0.4: checks the page sources for the Playlists and Up next views and for shuffle and
+/// repeat. Records counts, structure, ID patterns and button labels; never titles or IDs.
+enum LibraryCheck {
+    static let reportFile = Spike.logsFolder.appendingPathComponent("YTNotchSpike-library.json")
+
+    /// Check mode only: every media element stays truly muted, whatever the page sets. The
+    /// page still reads back the value it last set, so its own volume settings never change.
+    static let muteScript = """
+    (() => {
+      const muted = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'muted');
+      Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
+        configurable: true,
+        get() { return this.__spikePageMuted || false; },
+        set(value) { this.__spikePageMuted = !!value; muted.set.call(this, true); },
+      });
+      const play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () { muted.set.call(this, true); return play.apply(this, arguments); };
+      document.addEventListener('playing', (e) => { if (e.target instanceof HTMLMediaElement) muted.set.call(e.target, true); }, true);
+      document.addEventListener('loadstart', (e) => { if (e.target instanceof HTMLMediaElement) muted.set.call(e.target, true); }, true);
+      window.__spikeReallyMuted = (el) => muted.get.call(el);
+    })();
+    """
+
+    static let helpers = """
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const describe = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+      + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).slice(0, 3).join('.') : '');
+    const hash = (text) => { let h = 0; for (const c of text) h = (h * 31 + c.charCodeAt(0)) | 0; return h; };
+    const listId = (href) => { try { return new URL(href, location.href).searchParams.get('list'); } catch (e) { return null; } };
+    const idKind = (id) => id === 'LM' ? 'LM' : id.slice(0, 2);
+    """
+
+    /// Run on the home page: the playlist list in the sidebar.
+    static let sidebarScript = helpers + """
+    const links = [...document.querySelectorAll('a[href*="list="]')];
+    const guide = document.querySelector('ytmusic-guide-renderer') || document.querySelector('[id*="guide"]');
+    const inGuide = guide ? links.filter((a) => guide.contains(a)) : [];
+    const entries = [...document.querySelectorAll('ytmusic-guide-entry-renderer')];
+    // Guide entries are not links; each element carries its renderer data as a property.
+    const dataOf = (e) => e.data || e.__data || null;
+    const browseIdOf = (e) => {
+      const d = dataOf(e);
+      const endpoint = d && d.navigationEndpoint;
+      return (endpoint && endpoint.browseEndpoint && endpoint.browseEndpoint.browseId) || null;
+    };
+    const browseIds = entries.map(browseIdOf);
+    const ids = [...new Set(browseIds.filter((id) => id && id.startsWith('VL')).map((id) => id.slice(2)))];
+    const sampleData = entries.map(dataOf).find((d) => d && d.navigationEndpoint);
+    const entryLinks = entries.map((e) => e.querySelector('a[href*="list="]')).filter(Boolean);
+    const report = {
+      entriesWithData: entries.filter((e) => dataOf(e)).length,
+      dataKeys: sampleData ? Object.keys(sampleData).slice(0, 20) : null,
+      endpointKeys: sampleData ? Object.keys(sampleData.navigationEndpoint) : null,
+      browseIdKinds: browseIds.map((id) => id ? id.slice(0, 4) : null),
+      entriesWithThumbnailData: entries.filter((e) => { const d = dataOf(e); return d && (d.thumbnail || d.thumbnailRenderer); }).length,
+      guide: guide ? describe(guide) : null,
+      guideEntries: entries.length,
+      linksWithList: links.length,
+      linksInGuide: inGuide.length,
+      uniquePlaylists: ids.length,
+      firstIsLikedMusic: ids[0] === 'LM',
+      idKinds: ids.map(idKind),
+      entriesWithLink: entryLinks.length,
+      entriesWithText: entries.filter((e) => (e.textContent || '').trim().length > 0).length,
+      entriesWithImage: entries.filter((e) => e.querySelector('img')).length,
+      sampleEntry: entries.length ? [describe(entries[entries.length - 1]), ...[...entries[entries.length - 1].querySelectorAll('*')].slice(0, 8).map(describe)] : [],
+    };
+
+    // Thumbnails: the sidebar has none, so try the Library page, reached through the
+    // site's own navigation (a click on the Library entry) so playback is not interrupted.
+    const libraryEntry = entries.find((e) => browseIdOf(e) === 'FEmusic_library_landing');
+    if (libraryEntry) {
+      (libraryEntry.querySelector('tp-yt-paper-item') || libraryEntry).click();
+      await sleep(5000);
+      const cards = [...document.querySelectorAll('ytmusic-two-row-item-renderer, ytmusic-responsive-list-item-renderer')];
+      const cardId = (c) => {
+        const d = c.data || c.__data;
+        const runs = d && d.title && d.title.runs;
+        const endpoint = d && (d.navigationEndpoint || (runs && runs[0] && runs[0].navigationEndpoint));
+        const browseId = endpoint && endpoint.browseEndpoint && endpoint.browseEndpoint.browseId;
+        if (browseId && browseId.startsWith('VL')) return browseId.slice(2);
+        const a = c.querySelector('a[href*="list="]');
+        return a ? listId(a.href) : null;
+      };
+      const withImage = new Set();
+      for (const c of cards) {
+        const id = cardId(c);
+        const img = c.querySelector('img');
+        if (id && img && img.src && !img.src.startsWith('data:')) withImage.add(id);
+      }
+      report.library = {
+        path: location.pathname,
+        cards: cards.length,
+        playlistCardsWithImage: withImage.size,
+        sidebarPlaylistsWithThumbnail: ids.filter((id) => withImage.has(id)).length,
+      };
+    }
+    return JSON.stringify({ report, chosen: ids.includes('LM') ? 'LM' : (ids[0] || null) });
+    """
+
+    /// Run on the watch page after starting a playlist by its address.
+    static let playerScript = helpers + """
+    const video = () => document.querySelector('video');
+    const key = () => (navigator.mediaSession && navigator.mediaSession.metadata) ? hash(navigator.mediaSession.metadata.title + '|' + navigator.mediaSession.metadata.artist) : 0;
+    const waitFor = async (test, timeout) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) { if (test()) return Date.now() - start; await sleep(200); }
+      return -1;
+    };
+    const report = {};
+    const v = video();
+    report.start = {
+      path: location.pathname,
+      hasListParam: new URL(location.href).searchParams.has('list'),
+      hasVideo: !!v,
+      playing: v ? !v.paused : null,
+      reallyMuted: v && window.__spikeReallyMuted ? window.__spikeReallyMuted(v) : null,
+      playbackState: navigator.mediaSession ? navigator.mediaSession.playbackState : null,
+    };
+    if (v && v.paused) { await v.play().catch(() => {}); await sleep(2000); report.start.playingAfterPlay = !video().paused; }
+
+    const bar = document.querySelector('ytmusic-player-bar');
+    const label = (el) => el ? (el.getAttribute('aria-label') || el.getAttribute('title') || '') : null;
+    // Find controls by their accessible labels, wherever they live.
+    const all = [...document.querySelectorAll('*')];
+    const labelled = (re) => all.filter((el) => re.test(el.getAttribute('aria-label') || '') || re.test(el.getAttribute('title') || ''));
+    const show = (els) => els.slice(0, 6).map((el) => describe(el) + ' [' + label(el) + '] in ' + (el.parentElement ? describe(el.parentElement) : '-'));
+    report.controls = {
+      playerBarTag: !!bar,
+      playerTags: [...new Set(all.map((e) => e.tagName.toLowerCase()).filter((t) => t.includes('player')))],
+      shuffle: show(labelled(/shuffle/i)),
+      repeat: show(labelled(/repeat/i)),
+      next: show(labelled(/^next/i)),
+      playPause: show(labelled(/^(play|pause)$/i)),
+    };
+
+    const queueItems = () => [...document.querySelectorAll('ytmusic-player-queue-item')];
+    const current = (items) => items.findIndex((i) => i.getAttribute('play-button-state') === 'playing');
+    const indices = (items, test) => items.map((i, n) => test(i) ? n : -1).filter((n) => n >= 0).slice(0, 6);
+    const order = () => hash(queueItems().map((i) => (i.textContent || '').trim()).join('|'));
+    const items = queueItems();
+    report.queue = {
+      items: items.length,
+      sample: items[0] ? describe(items[0]) : null,
+      attributes: items[0] ? [...new Set(items.flatMap((i) => [...i.attributes].map((a) => a.name)))] : [],
+      selectedCount: items.filter((i) => i.hasAttribute('selected')).length,
+      selectedIndices: indices(items, (i) => i.hasAttribute('selected')),
+      playingIndices: indices(items, (i) => i.getAttribute('play-button-state') === 'playing'),
+      automixIndicesFirst: indices(items, (i) => i.hasAttribute('is-automix')),
+      automixCount: items.filter((i) => i.hasAttribute('is-automix')).length,
+      wrappers: [...new Set(items.map((i) => i.parentElement ? describe(i.parentElement) : '-'))].slice(0, 4),
+      currentIndex: current(items),
+      playButtonStates: [...new Set(items.map((i) => i.getAttribute('play-button-state')).filter(Boolean))],
+      withTitle: items.filter((i) => i.querySelector('.song-title')).length,
+      withArtist: items.filter((i) => i.querySelector('.byline')).length,
+      withThumbnail: items.filter((i) => i.querySelector('img')).length,
+      withDuration: items.filter((i) => i.querySelector('.duration')).length,
+    };
+
+    const firstLabelled = (re) => { const el = labelled(re)[0]; return el ? { el, selector: describe(el) } : null; };
+    const repeat = firstLabelled(/repeat/i);
+    const shuffle = firstLabelled(/shuffle/i);
+    report.modes = {
+      repeatSelector: repeat ? repeat.selector : null,
+      shuffleSelector: shuffle ? shuffle.selector : null,
+      repeatInitial: repeat ? label(repeat.el) : null,
+      shuffleInitial: shuffle ? label(shuffle.el) : null,
+      shuffleAriaPressed: shuffle ? shuffle.el.getAttribute('aria-pressed') : null,
+      barRepeatAttribute: bar ? bar.getAttribute('repeat-mode') : null,
+    };
+    if (repeat) {
+      const cycle = [label(repeat.el) + ' / ' + (bar ? bar.getAttribute('repeat-mode') : '')];
+      for (let i = 0; i < 3; i++) {
+        repeat.el.click();
+        await sleep(700);
+        cycle.push(label(repeat.el) + ' / ' + (bar ? bar.getAttribute('repeat-mode') : ''));
+      }
+      report.modes.repeatCycle = cycle;
+      report.modes.repeatRestored = cycle[cycle.length - 1] === cycle[0];
+    }
+    if (shuffle) {
+      // Toggle shuffle twice, then make sure it ends off.
+      const pressed = () => shuffle.el.getAttribute('aria-pressed');
+      const before = order();
+      const currentBefore = key();
+      shuffle.el.click();
+      await sleep(2000);
+      const mid = order();
+      report.modes.afterFirstClick = { pressed: pressed(), queueOrderChanged: mid !== before, currentTrackKept: key() === currentBefore };
+      shuffle.el.click();
+      await sleep(2000);
+      report.modes.afterSecondClick = { pressed: pressed(), queueOrderChanged: order() !== mid, backToFirstOrder: order() === before, currentTrackKept: key() === currentBefore };
+      if (pressed() !== 'false') { shuffle.el.click(); await sleep(1500); }
+      report.modes.shuffleFinalPressed = pressed();
+      report.modes.queueItemsAfter = queueItems().length;
+    }
+
+    const afterShuffle = queueItems();
+    const targetIndex = Math.min(3, afterShuffle.length - 1);
+    if (targetIndex > 0) {
+      const target = afterShuffle[targetIndex];
+      const before = key();
+      const clickTarget = target.querySelector('ytmusic-play-button-renderer') || target.querySelector('.song-title') || target;
+      clickTarget.click();
+      const ms = await waitFor(() => key() !== 0 && key() !== before, 8000);
+      await sleep(1000);
+      report.queueJump = {
+        targetIndex,
+        clicked: describe(clickTarget),
+        changedAfterMs: ms,
+        newCurrentIndex: current(queueItems()),
+        playing: video() ? !video().paused : null,
+      };
+    }
+
+    const last = video();
+    if (last) { last.pause(); await sleep(500); }
+    report.final = {
+      paused: last ? last.paused : null,
+      reallyMuted: last && window.__spikeReallyMuted ? window.__spikeReallyMuted(last) : null,
+      pageSeesMuted: last ? last.muted : null,
+      repeat: repeat ? label(repeat.el) : null,
+    };
+    return JSON.stringify(report);
+    """
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, NSMenuDelegate {
     private var window: HostWindow!
     private var webView: WKWebView!
@@ -499,6 +726,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     private var visibleFrame: NSRect?
     private var isCheckingOnly = false
     private var bridgeCheckPending = CommandLine.arguments.contains("--check-bridge")
+
+    private enum LibraryStep { case off, waitingForHome, waitingForWatch, running }
+    private var libraryStep: LibraryStep = CommandLine.arguments.contains("--check-library") ? .waitingForHome : .off
+    private var sidebarReport: Any = NSNull()
 
     private var isPlayerHidden: Bool { visibleFrame != nil }
 
@@ -530,6 +761,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         configuration.userContentController.addUserScript(
             WKUserScript(source: BridgeCheck.captureScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
+        if libraryStep != .off {
+            configuration.userContentController.addUserScript(
+                WKUserScript(source: LibraryCheck.muteScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            )
+        }
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.customUserAgent = Spike.safariUserAgent
@@ -739,12 +975,76 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         window.title = "YT Notch spike · \(host)"
         Spike.log("loaded \(host)\(webView.url?.path ?? "")")
 
+        if libraryStep != .off, host == "music.youtube.com" {
+            advanceLibraryCheck(path: webView.url?.path ?? "")
+        }
+
         // `--check-bridge`: once the player has had time to start up, run the check and quit.
         if bridgeCheckPending, host == "music.youtube.com" {
             bridgeCheckPending = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
                 self?.runBridgeCheck { NSApp.terminate(nil) }
             }
+        }
+    }
+
+    /// `--check-library`: read the sidebar on the home page, start the chosen playlist by its
+    /// address, then check the queue, shuffle and repeat on the watch page, write the report
+    /// and quit.
+    private func advanceLibraryCheck(path: String) {
+        switch (libraryStep, path) {
+        case (.waitingForHome, "/"):
+            libraryStep = .running
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+                guard let self else { return }
+                Spike.log("library check: reading the sidebar")
+                self.webView.callAsyncJavaScript(LibraryCheck.sidebarScript, arguments: [:], in: nil, in: .page) { result in
+                    let object = Self.jsonObject(result)
+                    let dict = object as? [String: Any]
+                    self.sidebarReport = dict?["report"] ?? object
+                    guard let chosen = dict?["chosen"] as? String,
+                          var components = URLComponents(string: "https://music.youtube.com/watch") else {
+                        self.finishLibraryCheck(player: ["error": "no playlist in the sidebar"])
+                        return
+                    }
+                    components.queryItems = [URLQueryItem(name: "list", value: chosen)]
+                    self.libraryStep = .waitingForWatch
+                    Spike.log("library check: starting a playlist by its address")
+                    self.webView.load(URLRequest(url: components.url!))
+                }
+            }
+        case (.waitingForWatch, "/watch"):
+            libraryStep = .running
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                guard let self else { return }
+                Spike.log("library check: checking queue, shuffle and repeat")
+                self.webView.callAsyncJavaScript(LibraryCheck.playerScript, arguments: [:], in: nil, in: .page) { result in
+                    self.finishLibraryCheck(player: Self.jsonObject(result))
+                }
+            }
+        default:
+            break
+        }
+    }
+
+    private func finishLibraryCheck(player: Any) {
+        let report: [String: Any] = ["sidebar": sidebarReport, "player": player]
+        if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: LibraryCheck.reportFile)
+        }
+        Spike.log("library check finished, wrote \(LibraryCheck.reportFile.path)")
+        NSApp.terminate(nil)
+    }
+
+    private static func jsonObject(_ result: Result<Any, Error>) -> Any {
+        switch result {
+        case .success(let value):
+            if let text = value as? String, let object = try? JSONSerialization.jsonObject(with: Data(text.utf8)) {
+                return object
+            }
+            return ["raw": "\(value)"]
+        case .failure(let error):
+            return ["error": error.localizedDescription]
         }
     }
 
