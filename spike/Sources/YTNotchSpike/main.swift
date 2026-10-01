@@ -250,6 +250,247 @@ final class PlaybackMonitor {
     }
 }
 
+/// S0.3: checks each core bridge source from the plan's contract on the live site.
+/// Records presence, shapes and timings only; titles, artists and URLs are never written.
+enum BridgeCheck {
+    static let reportFile = Spike.logsFolder.appendingPathComponent("YTNotchSpike-bridge.json")
+
+    /// Runs before the site's own scripts and keeps a reference to every Media Session action
+    /// handler the site registers, plus its last position state.
+    static let captureScript = """
+    (() => {
+      if (!window.MediaSession) return;
+      // Patch the prototype, so calls made through it (or `.call`) are seen too.
+      const proto = MediaSession.prototype;
+      const handlers = window.__spikeHandlers = {};
+      window.__spikeActionCalls = [];
+      const setActionHandler = proto.setActionHandler;
+      proto.setActionHandler = function (action, handler) {
+        window.__spikeActionCalls.push(action + (handler ? '' : ':null'));
+        if (handler) handlers[action] = handler; else delete handlers[action];
+        return setActionHandler.call(this, action, handler);
+      };
+      proto.setActionHandler.__spike = true;
+      if (proto.setPositionState) {
+        const setPositionState = proto.setPositionState;
+        window.__spikePositionCalls = 0;
+        proto.setPositionState = function (state) {
+          window.__spikePositionCalls++;
+          window.__spikePosition = state ? { duration: state.duration, position: state.position, playbackRate: state.playbackRate } : null;
+          return setPositionState.call(this, state);
+        };
+      }
+    })();
+    """
+
+    /// The body of an async function: plays muted, seeks, pauses, then next and previous
+    /// through the captured handlers, and leaves the player paused with its mute restored.
+    static let checkScript = """
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const ms = navigator.mediaSession;
+    const handlers = window.__spikeHandlers || {};
+    const video = () => document.querySelector('video');
+    const round = (n) => Math.round(n * 10) / 10;
+    const key = () => (ms && ms.metadata) ? ms.metadata.title + '\\u0001' + ms.metadata.artist : '';
+    const meta = () => {
+      const m = ms && ms.metadata;
+      if (!m) return null;
+      return {
+        title: !!m.title, artist: !!m.artist, album: !!m.album,
+        artwork: (m.artwork || []).map((a) => {
+          let host = 'invalid';
+          try { host = new URL(a.src).host; } catch (e) {}
+          return { sizes: a.sizes || '', type: a.type || '', host };
+        }),
+      };
+    };
+    const find = (selectors) => {
+      for (const selector of selectors) { const el = document.querySelector(selector); if (el) return { el, selector }; }
+      return null;
+    };
+    const playButtonSelectors = ['ytmusic-player-bar #play-pause-button', '#play-pause-button', '.play-pause-button'];
+    const nextButtonSelectors = ['ytmusic-player-bar .next-button', '.next-button'];
+    const previousButtonSelectors = ['ytmusic-player-bar .previous-button', '.previous-button'];
+    const state = () => {
+      const v = video();
+      const found = find(playButtonSelectors);
+      const button = found ? found.el : null;
+      return {
+        hasVideo: !!v,
+        paused: v ? v.paused : null,
+        position: v ? round(v.currentTime) : null,
+        duration: v ? (isFinite(v.duration) ? round(v.duration) : String(v.duration)) : null,
+        readyState: v ? v.readyState : null,
+        playbackState: ms ? ms.playbackState : null,
+        pageButton: button ? (button.getAttribute('title') || button.getAttribute('aria-label') || '') : null,
+        positionState: window.__spikePosition || null,
+        positionStateCalls: window.__spikePositionCalls || 0,
+      };
+    };
+    const keepMuted = () => { const v = video(); if (v) v.muted = true; };
+    const waitFor = async (test, timeout) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        keepMuted();
+        if (test()) return Date.now() - start;
+        await sleep(200);
+      }
+      return -1;
+    };
+
+    const report = {
+      capture: {
+        wrapperInstalled: !!(window.MediaSession && MediaSession.prototype.setActionHandler.__spike),
+        actionCalls: window.__spikeActionCalls || [],
+      },
+      handlers: Object.keys(handlers).sort(),
+      buttons: {
+        playPause: (find(playButtonSelectors) || {}).selector || null,
+        next: (find(nextButtonSelectors) || {}).selector || null,
+        previous: (find(previousButtonSelectors) || {}).selector || null,
+      },
+      metadata: meta(),
+      initial: state(),
+      steps: {},
+    };
+
+    // What the player bar's DOM looks like, to pick fallback selectors.
+    const describe = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+      + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).slice(0, 3).join('.') : '');
+    const discover = (word) => [...document.querySelectorAll('[id*="' + word + '"], [class*="' + word + '"]')].slice(0, 8).map(describe);
+    const discovery = () => {
+      const bar = document.querySelector('ytmusic-player-bar');
+      return {
+        playerBar: !!bar,
+        playerBarShadowRoot: !!(bar && bar.shadowRoot),
+        playerBarButtons: bar ? [...bar.querySelectorAll('button, [role="button"], tp-yt-paper-icon-button, yt-icon-button')].slice(0, 20).map(describe) : [],
+        next: discover('next-button'),
+        previous: discover('previous-button'),
+        playPause: discover('play-pause'),
+      };
+    };
+    report.discovery = discovery();
+
+    // The same search, also inside open shadow roots, with the chain of shadow hosts.
+    const deepAll = (root, out) => {
+      for (const el of root.querySelectorAll('*')) { out.push(el); if (el.shadowRoot) deepAll(el.shadowRoot, out); }
+      return out;
+    };
+    const hostChain = (el) => {
+      const chain = [];
+      let node = el;
+      while (node) {
+        const root = node.getRootNode();
+        if (!root || root === document || !root.host) break;
+        chain.unshift(root.host.tagName.toLowerCase());
+        node = root.host;
+      }
+      return chain.join(' > ');
+    };
+    const deepDiscovery = () => {
+      const all = deepAll(document, []);
+      const match = (word) => all
+        .filter((el) => (el.id && el.id.includes(word)) || (typeof el.className === 'string' && el.className.includes(word)))
+        .slice(0, 6).map((el) => (hostChain(el) || 'document') + ' :: ' + describe(el));
+      return {
+        elements: all.length,
+        shadowHosts: all.filter((el) => el.shadowRoot).length,
+        iframes: document.querySelectorAll('iframe').length,
+        playerBarTags: all.filter((el) => el.tagName.toLowerCase().includes('player-bar')).slice(0, 5).map((el) => (hostChain(el) || 'document') + ' :: ' + describe(el)),
+        next: match('next-button'),
+        previous: match('previous-button'),
+        playPause: match('play-pause'),
+        ariaNext: all.filter((el) => /next/i.test(el.getAttribute('aria-label') || '')).slice(0, 4).map((el) => (hostChain(el) || 'document') + ' :: ' + describe(el) + ' [' + el.getAttribute('aria-label') + ']'),
+      };
+    };
+    report.deepDiscovery = deepDiscovery();
+    const first = video();
+    if (!first) { report.error = 'no video element'; return JSON.stringify(report); }
+    const wasMuted = first.muted;
+    first.muted = true;
+    try {
+      let playError = null;
+      const t0 = first.currentTime;
+      try { await first.play(); } catch (e) { playError = String((e && e.name) || e); }
+      await sleep(3000);
+      report.steps.play = { error: playError, advanced: round(video().currentTime - t0), ...state() };
+
+      const v = video();
+      const target = Math.max(1, Math.min((isFinite(v.duration) ? v.duration : 60) - 15, v.currentTime + 30));
+      v.currentTime = target;
+      await sleep(1500);
+      report.steps.seekViaVideo = { target: round(target), landed: round(video().currentTime), ok: Math.abs(video().currentTime - target) < 3, ...state() };
+
+      if (handlers.seekto) {
+        const target2 = Math.max(1, video().currentTime - 20);
+        handlers.seekto({ action: 'seekto', seekTime: target2 });
+        await sleep(1500);
+        report.steps.seekViaHandler = { target: round(target2), landed: round(video().currentTime), ok: Math.abs(video().currentTime - target2) < 3 };
+      }
+
+      video().pause();
+      await sleep(1200);
+      report.steps.pauseViaVideo = state();
+
+      if (handlers.play) {
+        handlers.play({ action: 'play' });
+        await sleep(2000);
+        report.steps.playViaHandler = state();
+      }
+      if (handlers.pause) {
+        handlers.pause({ action: 'pause' });
+        await sleep(1200);
+        report.steps.pauseViaHandler = state();
+      }
+      await video().play().catch(() => {});
+      await sleep(1500);
+
+      // Next and previous: the site's own Media Session handler if it registered one,
+      // otherwise the page's player-bar button (the plan's selector fallback).
+      const press = (action, selectors) => {
+        if (handlers[action]) { handlers[action]({ action }); return 'handler'; }
+        const button = find(selectors);
+        if (button) { button.el.click(); return 'button ' + button.selector; }
+        return 'none';
+      };
+
+      const before = key();
+      const elementBefore = video();
+      const nextVia = press('nexttrack', nextButtonSelectors);
+      const nextMs = await waitFor(() => key() !== '' && key() !== before, 10000);
+      await sleep(2000);
+      report.steps.next = { via: nextVia, changedAfterMs: nextMs, sameVideoElement: video() === elementBefore, metadata: meta(), ...state() };
+
+      const afterNext = key();
+      const previousVia = press('previoustrack', previousButtonSelectors);
+      const previousMs = await waitFor(() => key() !== '' && key() !== afterNext, 10000);
+      await sleep(1500);
+      report.steps.previous = { via: previousVia, changedAfterMs: previousMs, backToFirstTrack: key() === before, ...state() };
+      // Fallback for next with no handler and no button: seek to the end and let the site
+      // advance on its own.
+      const beforeEnd = key();
+      const ending = video();
+      if (isFinite(ending.duration)) ending.currentTime = ending.duration - 0.5;
+      await ending.play().catch(() => {});
+      const endMs = await waitFor(() => key() !== '' && key() !== beforeEnd, 10000);
+      await sleep(1000);
+      report.steps.nextViaSeekToEnd = { changedAfterMs: endMs, ...state() };
+
+      report.discoveryAfterPlay = discovery();
+      report.handlersAtEnd = Object.keys(handlers).sort();
+      report.capture.actionCallsAtEnd = window.__spikeActionCalls || [];
+    } finally {
+      const v = video();
+      if (v) v.pause();
+      await sleep(800);
+      const last = video();
+      if (last) last.muted = wasMuted;
+      report.final = state();
+    }
+    return JSON.stringify(report);
+    """
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, NSMenuDelegate {
     private var window: HostWindow!
     private var webView: WKWebView!
@@ -257,6 +498,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     private var statusItem: NSStatusItem?
     private var visibleFrame: NSRect?
     private var isCheckingOnly = false
+    private var bridgeCheckPending = CommandLine.arguments.contains("--check-bridge")
 
     private var isPlayerHidden: Bool { visibleFrame != nil }
 
@@ -284,6 +526,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         configuration.preferences.inactiveSchedulingPolicy = Spike.schedulingPolicy
         configuration.userContentController.addUserScript(
             WKUserScript(source: PlaybackMonitor.statsScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        )
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: BridgeCheck.captureScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
 
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -427,6 +672,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         spikeMenu.addItem(.separator())
         spikeMenu.addItem(withTitle: "Hide Player Window", action: #selector(togglePlayerWindow(_:)), keyEquivalent: "H").target = self
         spikeMenu.addItem(withTitle: "Playback Summary…", action: #selector(showSummary(_:)), keyEquivalent: "").target = self
+        spikeMenu.addItem(withTitle: "Check Bridge Sources", action: #selector(checkBridgeSources(_:)), keyEquivalent: "b").target = self
         spikeMenu.addItem(.separator())
         spikeMenu.addItem(withTitle: "Delete Website Data…", action: #selector(deleteWebsiteData(_:)), keyEquivalent: "").target = self
         mainMenu.addItem(submenu: spikeMenu, title: "Spike")
@@ -492,6 +738,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         let host = webView.url?.host ?? "?"
         window.title = "YT Notch spike · \(host)"
         Spike.log("loaded \(host)\(webView.url?.path ?? "")")
+
+        // `--check-bridge`: once the player has had time to start up, run the check and quit.
+        if bridgeCheckPending, host == "music.youtube.com" {
+            bridgeCheckPending = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                self?.runBridgeCheck { NSApp.terminate(nil) }
+            }
+        }
+    }
+
+    @objc private func checkBridgeSources(_ sender: Any?) {
+        runBridgeCheck {}
+    }
+
+    private func runBridgeCheck(then done: @escaping () -> Void) {
+        Spike.log("bridge check started")
+        webView.callAsyncJavaScript(BridgeCheck.checkScript, arguments: [:], in: nil, in: .page) { result in
+            let text: String
+            switch result {
+            case .success(let value): text = value as? String ?? "\(value)"
+            case .failure(let error): text = "{\"error\": \"\(error.localizedDescription)\"}"
+            }
+            try? Data(text.utf8).write(to: BridgeCheck.reportFile)
+            Spike.log("bridge check finished, wrote \(BridgeCheck.reportFile.path)")
+            done()
+        }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
