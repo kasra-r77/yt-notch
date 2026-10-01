@@ -15,6 +15,8 @@ The script builds with SwiftPM and wraps the binary in an ad hoc signed `.app` w
 
 - **Check Sign-in (⌘I)**: shows whether the YouTube Music sign-in cookies exist. It reports names and domains only, never values.
 - **Reload (⌘R)** and **Go to YouTube Music (⌘H)**
+- **Hide Player Window (⇧⌘H)**: moves the web view's window far off-screen and turns the spike into a menu bar app (S0.2). From then on, use the music-note icon in the menu bar to show the window again, play or pause, see the playback summary, or quit.
+- **Playback Summary…**: totals from the playback monitor.
 - **Delete Website Data…**: signs the spike out by removing its own cookies and storage.
 
 The web view can be inspected: right-click the page and choose Inspect Element.
@@ -25,4 +27,11 @@ The web view can be inspected: right-click the page and choose Inspect Element.
 spike/build/YTNotchSpike.app/Contents/MacOS/YTNotchSpike --check-sign-in
 ```
 
-This prints the same cookie report without opening a window. It exits 0 when signed in and 1 otherwise. The app also logs to `~/Library/Logs/YTNotchSpike.log`.
+This prints the same cookie report without opening a window. It exits 0 when signed in and 1 otherwise.
+
+`--policy suspend|throttle|none` sets WebKit's inactive scheduling policy; the default is `none`.
+
+## Logs
+
+- `~/Library/Logs/YTNotchSpike.log`: navigation, user actions and summaries.
+- `~/Library/Logs/YTNotchSpike-playback.csv`: one row every 5 seconds with the position, the pause state, stall checks and media event counts, plus rows for display sleep and wake and Space changes. Track titles are never written.
