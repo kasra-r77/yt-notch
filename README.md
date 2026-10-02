@@ -20,15 +20,17 @@ xcodebuild -scheme YTNotch build
 
 The Xcode project is generated from `project.yml` and is not committed. The app is `YT Notch.app` under Xcode's DerivedData; open `YTNotch.xcodeproj` in Xcode to run it from there.
 
-### Running on the real site
+### Running
 
-Until the web player is wired in for good (I4.1), the app runs on canned tracks. To use YouTube Music instead:
+The app plays YouTube Music. The first launch opens its window on the site's sign-in; after that, **Show Web Player** in its menu brings the window back. The menu has every player control, for the [live check](docs/live-check.md) against the site.
+
+For development and demos it can run on canned tracks instead, with no account or network:
 
 ```bash
-defaults write io.github.kasra-r77.ytnotch engine web
+defaults write io.github.kasra-r77.ytnotch engine fake
 ```
 
-Then open the app and choose **Show Web Player** in its menu to sign in. The menu has every player control, for the [live check](docs/live-check.md) against the site. To go back, run `defaults delete io.github.kasra-r77.ytnotch engine`.
+To go back to the site, run `defaults delete io.github.kasra-r77.ytnotch engine`.
 
 The app logs to the system log under one subsystem. To watch what the web player does, including its recovery steps:
 

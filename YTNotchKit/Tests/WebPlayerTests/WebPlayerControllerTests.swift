@@ -72,6 +72,24 @@ struct WebPlayerControllerTests {
         }
     }
 
+    /// The full window shows the page, and the notch shows the store: whatever changes in the
+    /// page itself, as a person would change it in the full window, reaches the store.
+    @Test func whatChangesInThePageReachesTheStore() async throws {
+        let controller = WebPlayerController(configuration: try Self.fixture())
+        let store = PlayerStore(engine: controller)
+        try await eventually("ready") { store.state.track != nil }
+        _ = try await controller.webView.callAsyncJavaScript("""
+            window.fixture.setTrack(2);
+            document.querySelector('like-button-view-model button').click();
+            """, contentWorld: .page)
+        let page = try #require(try await controller.webView.callAsyncJavaScript("return window.fixture.status()", contentWorld: .page) as? [String: Any])
+        let title = try #require(page["title"] as? String)
+        #expect(page["liked"] as? Bool == true)
+        try await eventually("the store shows what the page shows") {
+            store.state.track?.title == title && store.state.liked && store.state.queue.first(where: \.isCurrent)?.index == 2
+        }
+    }
+
     @Test func usesSafarisUserAgentAndTheBridge() throws {
         let controller = WebPlayerController(configuration: try Self.fixture())
         #expect(controller.webView.customUserAgent?.contains("Safari/") == true)

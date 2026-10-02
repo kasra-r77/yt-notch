@@ -7,9 +7,9 @@ import WebPlayer
 
 /// The app target only wires the modules together.
 ///
-/// The store runs on FakeEngine's canned tracks unless the `engine` setting is `web`. Until
-/// I4.1 wires the web player in for good, that is a debug switch:
-/// `defaults write io.github.kasra-r77.ytnotch engine web`, or launch with `-engine web`.
+/// The store runs on the web player: the one web view, on YouTube Music. For development and
+/// demos it can run on FakeEngine's canned tracks instead, with the `engine` setting:
+/// `defaults write io.github.kasra-r77.ytnotch engine fake`, or launch with `-engine fake`.
 @main
 struct YTNotchApp: App {
     @State private var store: PlayerStore
@@ -20,7 +20,13 @@ struct YTNotchApp: App {
     init() {
         let store: PlayerStore
         let notches: NotchDisplayManager
-        if UserDefaults.standard.string(forKey: "engine") == "web" {
+        if UserDefaults.standard.string(forKey: "engine") == "fake" {
+            let engine = FakeEngine(runsClock: true)
+            webPlayer = nil
+            store = PlayerStore(engine: engine)
+            notches = NotchDisplayManager(store: store)
+            notches.retry = { engine.simulateReload() }
+        } else {
             let player = WebPlayerController()
             webPlayer = player
             store = PlayerStore(engine: player, playlistCache: UserDefaultsPlaylistCache())
@@ -30,12 +36,6 @@ struct YTNotchApp: App {
             notches.retry = { player.retry() }
             // Once the app has finished launching: the first launch opens on sign-in.
             Task { @MainActor in player.openOnFirstLaunch() }
-        } else {
-            let engine = FakeEngine(runsClock: true)
-            webPlayer = nil
-            store = PlayerStore(engine: engine)
-            notches = NotchDisplayManager(store: store)
-            notches.retry = { engine.simulateReload() }
         }
         _store = State(initialValue: store)
         self.notches = notches
