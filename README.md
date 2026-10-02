@@ -28,7 +28,7 @@ Until the web player is wired in for good (I4.1), the app runs on canned tracks.
 defaults write io.github.kasra-r77.ytnotch engine web
 ```
 
-Then open the app and choose **Show Web Player** in its menu to sign in. To go back, run `defaults delete io.github.kasra-r77.ytnotch engine`.
+Then open the app and choose **Show Web Player** in its menu to sign in. The menu has every player control, for the [live check](docs/live-check.md) against the site. To go back, run `defaults delete io.github.kasra-r77.ytnotch engine`.
 
 The app logs to the system log under one subsystem. To watch what the web player does, including its recovery steps:
 

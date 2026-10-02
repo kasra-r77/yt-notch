@@ -64,4 +64,5 @@ swift test --package-path YTNotchKit
 - The fixture page the bridge is tested against: `YTNotchKit/Tests/WebPlayerTests/Fixtures/fake-player.html`. Web view tests must wait with `await` (see `BridgeHarness`); spinning the run loop blocks WebKit under `swift test`.
 - Design specs: `docs/design/` (D1: `notch-shapes.md`)
 - What the site exposes, and what it doesn't: `docs/spike-report.md`
+- The live check against the real site: `docs/live-check.md`. Run it after any change to `bridge.js` and record the run there.
 - Decisions outside the plan: `docs/decisions.md`
