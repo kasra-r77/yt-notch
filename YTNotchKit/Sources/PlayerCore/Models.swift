@@ -26,8 +26,7 @@ public struct Track: Equatable, Sendable, Identifiable {
     }
 }
 
-/// The site exposes no thumbnail for most playlists (spike report, S0.4), so `thumbnailURL`
-/// is usually nil.
+/// The site exposes no thumbnail for most playlists, so `thumbnailURL` is usually nil.
 public struct PlaylistItem: Equatable, Sendable, Identifiable, Codable {
     public var id: String
     public var title: String

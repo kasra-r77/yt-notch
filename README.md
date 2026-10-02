@@ -63,7 +63,7 @@ The Xcode project is generated from `project.yml` and is not committed. The app 
 
 ### Running a development build
 
-A development build plays the site like a release, and its menu adds Debug › Notch State, which forces each notch state for review. The [live check](docs/live-check.md) runs the app against the site.
+A development build plays the site like a release, and its menu adds Debug › Notch State, which forces each notch state for review.
 
 For development and demos it can run on canned tracks instead, with no account or network:
 
@@ -116,9 +116,8 @@ swift test --package-path YTNotchKit
 |---|---|
 | `App/` | The thin app target, which only wires the modules together |
 | `YTNotchKit/` | The Swift package: `PlayerCore`, `WebPlayer`, `NotchUI`, `SystemMedia` |
-| `docs/design/` | Approved design specs |
-| `docs/spike-report.md` | What phase 0 learned about the site |
-| `docs/decisions.md` | Choices the plan did not make |
+| `docs/design.md` | How the app looks and behaves |
+| `docs/design/brand/` | The icon and disk image, and the script that draws them |
 
 Contributors and coding agents: read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) first.
 

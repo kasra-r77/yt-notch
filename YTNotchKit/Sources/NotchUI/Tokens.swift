@@ -2,8 +2,7 @@ import CoreGraphics
 import Foundation
 import SwiftUI
 
-/// The design tokens from `docs/design/tokens.md` (D5), under the names that file gives
-/// them. Code reads sizes, colours and timings from here, never from literals; notch and
+/// The design tokens (D5 in `docs/design.md`). Code reads sizes, colours and timings from here, never from literals; notch and
 /// menu bar sizes come from `ScreenGeometry` instead.
 public enum Tokens {
     /// Sizes in points.

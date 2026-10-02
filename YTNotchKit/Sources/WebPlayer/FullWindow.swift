@@ -3,8 +3,8 @@ import WebKit
 
 /// The full window (design spec D7): the one web view, brought on screen.
 ///
-/// Hidden, the window stays ordered in but far off-screen, which keeps the page playing
-/// (spike report, S0.2). Closing it only hides it.
+/// Hidden, the window stays ordered in but far off-screen, which keeps the page playing.
+/// Closing it only hides it.
 @MainActor
 final class FullWindow: NSObject {
     static let size = NSSize(width: 1100, height: 760)

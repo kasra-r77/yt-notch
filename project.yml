@@ -13,7 +13,7 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_HARDENED_RUNTIME: YES
-    # Signed ad hoc: there is no Developer ID yet (docs/decisions.md).
+    # Signed ad hoc: there is no Developer ID yet.
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "-"
     DEVELOPMENT_TEAM: ""

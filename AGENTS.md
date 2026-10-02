@@ -12,7 +12,7 @@ Read this before changing anything. The plan is the source of truth for what to 
 6. Edit `project.yml`, never the generated Xcode project.
 7. New logic comes with tests.
 8. No new compiler warnings. The project treats warnings as errors.
-9. Record any choice the plan did not make in `docs/decisions.md`.
+9. Explain any choice the plan did not make in the pull request description.
 10. If a "done when" point cannot be met, stop and report instead of working around it.
 
 ## Modules
@@ -55,16 +55,14 @@ swift test --package-path YTNotchKit
 - **One ticket = one branch = one pull request.** Name the branch `yt-<number>-<short-name>` and start the PR title with the ticket key.
 - The PR description lists the ticket's "done when" points and which ones it met.
 - CI (`.github/workflows/ci.yml`, job "Build and test") must pass before merging. GitHub does not enforce this until the repo goes public (YT-39), so check it yourself before merging.
-- Build tickets labelled `needs-design` wait for their design ticket's approval. The approved values are in the ticket's "Design spec" section and in `docs/design/`.
+- Build tickets labelled `needs-design` wait for their design ticket's approval. The approved values are in the ticket's "Design spec" section and in `docs/design.md`.
 - Gate tickets (G0 to G3) are hands-on reviews by the owner.
 
 ## Reference
 
 - The bridge: `YTNotchKit/Sources/WebPlayer/Resources/bridge.js`. Its page selectors are in the `PAGE` table at the top. Its Swift side is `Bridge.swift`.
 - The fixture page the bridge is tested against: `YTNotchKit/Tests/WebPlayerTests/Fixtures/fake-player.html`. Web view tests must wait with `await` (see `BridgeHarness`); spinning the run loop blocks WebKit under `swift test`.
-- Design specs: `docs/design/`: D1 `notch-shapes.md`, D2 `playing-view.md`, D3 `list-views.md`, D4 `message-states.md`, D5 `tokens.md`, D6 `brand/`, D7 `windows-and-menus.md`, D8 `pill-without-notch.md`. Mockups: the D1 canvas and the D2 to D7 canvas (which also holds D8), linked at the top of each spec.
+- Design: `docs/design.md`, with sections D1 to D9 that code comments refer to. The icon and disk image are drawn by `docs/design/brand/make-assets.swift`.
 - The notch: `YTNotchKit/Sources/NotchUI`. `NotchDisplayManager` keeps one notch per chosen display and follows display, Space and full-screen changes; `NotchPanel` is one display's notch, `ScreenGeometry` what it reads from the screen (never hard-code notch or menu bar sizes), `NotchShape` the spec's path. Hit-test paths with `CGPath.contains`; SwiftUI's `Path.contains` misreads the joined outline.
 - Design values: `YTNotchKit/Sources/NotchUI/Tokens.swift` holds the D1 tokens. Sizes and timings come from there, never from literals in code. `HoverMachine` is the hover logic (plain, no views or timers).
-- What the site exposes, and what it doesn't: `docs/spike-report.md`
-- The live check against the real site: `docs/live-check.md`. Run it after any change to `bridge.js` and record the run there.
-- Decisions outside the plan: `docs/decisions.md`
+- After any change to `bridge.js`, try it against the real site (sign in, play, pause, next, seek, like, and both lists) and say so in the pull request.

@@ -1,7 +1,6 @@
 #!/bin/bash
 # Builds a release disk image in dist/. Its layout is design spec D6's and needs create-dmg;
-# without it the image is plain. The app is signed ad hoc and isn't notarised
-# (docs/decisions.md).
+# without it the image is plain. The app is signed ad hoc and isn't notarised.
 #
 # EXPECTED_VERSION, when set, must match the app's version.
 set -euo pipefail

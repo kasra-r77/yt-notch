@@ -19,7 +19,7 @@ Edit `project.yml`, never the generated Xcode project. The project treats warnin
 
 ## When the site changes
 
-Most fixes for a change on YouTube Music's side belong in the `PAGE` table at the top of `YTNotchKit/Sources/WebPlayer/Resources/bridge.js`, the only place that knows the site. Update the fixture page the bridge is tested against (`YTNotchKit/Tests/WebPlayerTests/Fixtures/fake-player.html`) to match, and run the [live check](docs/live-check.md) against the site before the pull request merges.
+Most fixes for a change on YouTube Music's side belong in the `PAGE` table at the top of `YTNotchKit/Sources/WebPlayer/Resources/bridge.js`, the only place that knows the site. Update the fixture page the bridge is tested against (`YTNotchKit/Tests/WebPlayerTests/Fixtures/fake-player.html`) to match, and try the change against the real site (sign in, play, pause, next, seek, like, and both lists) before the pull request merges.
 
 ## Never
 

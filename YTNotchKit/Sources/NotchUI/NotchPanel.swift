@@ -6,8 +6,6 @@ import SwiftUI
 /// The notch on one display. It never takes keyboard focus or activates the app, so typing
 /// elsewhere is never interrupted. It ignores mouse events except while the pointer is inside
 /// the target shape, so clicks everywhere else reach the app underneath.
-///
-/// Built on our own panel rather than DynamicNotchKit; see `docs/decisions.md`.
 @MainActor
 public final class NotchPanel {
     public private(set) var screen: ScreenGeometry

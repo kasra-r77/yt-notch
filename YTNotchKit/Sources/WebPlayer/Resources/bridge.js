@@ -18,7 +18,7 @@
   //   2. The page's video element for position, duration, play, pause and seek.
   //   3. The Media Session action handlers the site registers, for next and previous.
   //   4. Page facts and selectors, only where nothing standard exists. All of them are here.
-  // Checked against music.youtube.com on 2026-10-02 (docs/spike-report.md).
+  // Checked against music.youtube.com on 2026-10-02.
   const PAGE = {
     // The page's own config says whether the user is signed in; it is set early in <head>.
     signedInConfigKey: 'LOGGED_IN',

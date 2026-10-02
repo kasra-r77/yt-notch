@@ -1,7 +1,7 @@
 import Foundation
 
 /// A player with canned data, for tests and for running the UI without the web player. It
-/// behaves as the spikes measured the site: shuffle keeps the current track, and turning it
+/// behaves as the site does: shuffle keeps the current track, and turning it
 /// off restores the original order.
 @MainActor
 public final class FakeEngine: PlayerEngine {
