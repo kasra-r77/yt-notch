@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import PlayerCore
 
 /// Which displays show a notch (design spec, "Two or more displays").
 public enum NotchDisplaySetting: Equatable, Sendable, Codable {
@@ -60,15 +61,17 @@ public final class NotchDisplayManager {
     @ObservationIgnored private let readWindows: @MainActor () -> [FullScreenDetector.WindowInfo]
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let pointer: PointerTracker
+    @ObservationIgnored private let store: PlayerStore?
     @ObservationIgnored private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     @ObservationIgnored private var fullScreenRecheck: Task<Void, Never>?
 
-    /// Reads the setting from `defaults`, shows the notches and starts following display,
-    /// Space and app changes.
-    public convenience init(defaults: UserDefaults = .standard) {
+    /// Reads the setting from `defaults`, shows a notch for `store` on each chosen display and
+    /// starts following display, Space and app changes.
+    public convenience init(store: PlayerStore?, defaults: UserDefaults = .standard) {
         self.init(
             setting: .load(from: defaults),
             defaults: defaults,
+            store: store,
             screens: { NSScreen.screens.map(ScreenGeometry.init) },
             windows: FullScreenDetector.onScreenWindows
         )
@@ -78,12 +81,14 @@ public final class NotchDisplayManager {
     init(
         setting: NotchDisplaySetting,
         defaults: UserDefaults? = nil,
+        store: PlayerStore? = nil,
         screens: @escaping @MainActor () -> [ScreenGeometry],
         windows: @escaping @MainActor () -> [FullScreenDetector.WindowInfo] = { [] },
         pointer: PointerTracker = .shared
     ) {
         self.setting = setting
         self.defaults = defaults
+        self.store = store
         readScreens = screens
         readWindows = windows
         self.pointer = pointer
@@ -119,7 +124,7 @@ public final class NotchDisplayManager {
             if let panel = panels[screen.key] {
                 panel.update(screen: screen)
             } else {
-                panels[screen.key] = NotchPanel(screen: screen, pointer: pointer)
+                panels[screen.key] = NotchPanel(screen: screen, store: store, pointer: pointer)
             }
         }
         refreshFullScreen()

@@ -13,7 +13,11 @@ public final class PointerTracker {
     private var nextID = 0
     private var monitors: [Any] = []
 
-    private static let movement: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
+    /// Moves, and presses and releases too: letting go of a held button can start a dwell.
+    private static let movement: NSEvent.EventTypeMask = [
+        .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
+        .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp,
+    ]
 
     init() {}
 

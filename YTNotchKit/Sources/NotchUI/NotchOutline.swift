@@ -2,7 +2,7 @@ import CoreGraphics
 
 /// The four values every notch shape is drawn from (design spec, "Corner geometry"): the
 /// body's width and height, its bottom corner radius, and the flare at the top on each side.
-public struct NotchOutline: Equatable, Sendable {
+public struct NotchOutline: Hashable, Sendable {
     public var width: CGFloat
     public var height: CGFloat
     public var bottomRadius: CGFloat

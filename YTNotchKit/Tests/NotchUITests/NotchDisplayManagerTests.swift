@@ -85,8 +85,9 @@ struct NotchDisplayManagerTests {
         #expect(manager.notches[0] === builtIn, "the built-in notch is never rebuilt")
         #expect(Set(made.map(ObjectIdentifier.init)).count == 10)
         #expect(made.allSatisfy { $0.isClosed && !$0.window.isVisible }, "every unplugged notch is gone")
-        let ours = NSApplication.shared.windows.filter { $0 is NotchWindow && $0.isVisible }
-        #expect(ours.count == 1)
+        // Only this manager's windows: other suites' panels may be open at the same time.
+        let visible = ([builtIn] + made).filter { $0.window.isVisible }
+        #expect(visible.count == 1)
     }
 
     @Test func rearrangingMovesTheSameNotch() {

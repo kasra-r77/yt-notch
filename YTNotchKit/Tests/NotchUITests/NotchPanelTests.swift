@@ -109,7 +109,7 @@ struct NotchPanelTests {
     }
 
     @Test func drawsABlackShapeTopCentredOnAClearPanel() throws {
-        let model = NotchModel(outline: .idle(on: Displays.external))
+        let model = NotchModel(outline: .idle(on: Displays.external), band: Displays.external.band)
         let size = PanelLayout.frame(on: Displays.external).size
         let renderer = ImageRenderer(content: NotchRootView(model: model, fadesIn: false).frame(width: size.width, height: size.height))
         let image = try #require(renderer.cgImage)

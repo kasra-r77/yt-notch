@@ -22,7 +22,7 @@ let package = Package(
         .target(name: "EngineConformance", dependencies: ["PlayerCore"], path: "Tests/EngineConformance"),
         .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore", "EngineConformance"]),
         .testTarget(name: "WebPlayerTests", dependencies: ["WebPlayer", "PlayerCore", "EngineConformance"], resources: [.copy("Fixtures")]),
-        .testTarget(name: "NotchUITests", dependencies: ["NotchUI"]),
+        .testTarget(name: "NotchUITests", dependencies: ["NotchUI", "PlayerCore"]),
         .testTarget(name: "ArchitectureTests"),
     ]
 )

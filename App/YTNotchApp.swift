@@ -18,15 +18,17 @@ struct YTNotchApp: App {
     private let notches: NotchDisplayManager
 
     init() {
+        let store: PlayerStore
         if UserDefaults.standard.string(forKey: "engine") == "web" {
             let player = WebPlayerController()
             webPlayer = player
-            _store = State(initialValue: PlayerStore(engine: player, playlistCache: UserDefaultsPlaylistCache()))
+            store = PlayerStore(engine: player, playlistCache: UserDefaultsPlaylistCache())
         } else {
             webPlayer = nil
-            _store = State(initialValue: PlayerStore(engine: FakeEngine(runsClock: true)))
+            store = PlayerStore(engine: FakeEngine(runsClock: true))
         }
-        notches = NotchDisplayManager()
+        _store = State(initialValue: store)
+        notches = NotchDisplayManager(store: store)
     }
 
     var body: some Scene {
