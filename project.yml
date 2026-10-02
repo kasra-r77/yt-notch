@@ -61,12 +61,12 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         LSUIElement: true
         NSHumanReadableCopyright: Copyright © 2026 Kasra Rismanchi. Apache License 2.0.
-        # SUPublicEDKey stays empty until the owner makes the update keys (CONTRIBUTING, "Releases and updates");
-        # while it is empty the app doesn't start the updater.
+        # The public half of the update signing key; the private half is the SPARKLE_PRIVATE_KEY
+        # secret (CONTRIBUTING, "Releases and updates").
         SUFeedURL: https://github.com/kasra-r77/yt-notch/releases/latest/download/appcast.xml
         SUEnableAutomaticChecks: true
         SUScheduledCheckInterval: 86400
-        SUPublicEDKey: ""
+        SUPublicEDKey: OFiurJsGQwZRkr8MhX7fdFPWUQhIl3/C3TA7+l498V0=
     settings:
       base:
         PRODUCT_NAME: YT Notch
