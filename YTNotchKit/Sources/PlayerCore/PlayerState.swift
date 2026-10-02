@@ -25,6 +25,10 @@ public final class PlayerState {
     /// The library playlist playing now, if the page says.
     public internal(set) var playlistID: String?
     public internal(set) var queue: [QueueItem] = []
+    /// The pictures the page handed over, by address: the track's artwork and the queue's
+    /// thumbnails while they are in use, and a few recent ones besides. Nothing else in the
+    /// app downloads pictures.
+    public internal(set) var artwork: [URL: Data] = [:]
     public internal(set) var health = Health()
     public internal(set) var bridgeVersion: String?
 

@@ -89,6 +89,10 @@ public enum Bridge {
                 )
             }
             return .queue(items)
+        case "artwork":
+            guard let url = url(message["url"]), let text = message["data"] as? String,
+                  let data = Data(base64Encoded: text), !data.isEmpty else { return nil }
+            return .artwork(url: url, data: data)
         case "modes":
             let shuffle = message["shuffle"] as? Bool
             let mode = (message["repeat"] as? String).flatMap(RepeatMode.init(rawValue:))

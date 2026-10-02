@@ -18,6 +18,28 @@ struct StateTests {
         #expect(!state.liked)
     }
 
+    @Test func picturesFromThePageAreKeptByAddress() throws {
+        let (store, engine) = Fixture.readyStore()
+        let url = try #require(URL(string: "https://x.test/a.jpg"))
+        engine.emit(.artwork(url: url, data: Data([1, 2, 3])))
+        #expect(store.state.artwork[url] == Data([1, 2, 3]))
+        engine.emit(.artwork(url: url, data: Data([4])))
+        #expect(store.state.artwork[url] == Data([4]), "a new picture for the address replaces it")
+    }
+
+    @Test func oldPicturesGoButNeverOnesInUse() throws {
+        let (store, engine) = Fixture.readyStore()
+        let inUse = try #require(URL(string: "https://x.test/track.jpg"))
+        engine.emit(.state(PlaybackSnapshot(track: Track(id: "t", title: "T", artist: "A", artworkURL: inUse))))
+        engine.emit(.artwork(url: inUse, data: Data([1])))
+        let others = (0..<PlayerStore.artworkKept + 5).map { URL(string: "https://x.test/\($0).jpg")! }
+        for url in others { engine.emit(.artwork(url: url, data: Data([2]))) }
+        #expect(store.state.artwork[inUse] != nil, "the track's artwork stays, though it is the oldest")
+        #expect(store.state.artwork.count == PlayerStore.artworkKept)
+        #expect(store.state.artwork[others[0]] == nil, "the oldest others go")
+        #expect(store.state.artwork[others.last!] != nil)
+    }
+
     @Test func listsAndModesFollowTheirEvents() {
         let (store, engine) = Fixture.readyStore()
         #expect(store.state.playlists == Fixture.playlists)

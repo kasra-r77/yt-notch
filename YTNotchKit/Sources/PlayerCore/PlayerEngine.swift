@@ -25,6 +25,9 @@ public enum PlayerEvent: Equatable, Sendable {
     case signedOut
     case playlists([PlaylistItem])
     case queue([QueueItem])
+    /// A picture the page shows (the track's artwork, a queue thumbnail), handed over with
+    /// its address, so the app downloads nothing itself.
+    case artwork(url: URL, data: Data)
     /// Either mode is nil when the page can't read it; the store keeps its last value.
     case modes(shuffle: Bool?, repeatMode: RepeatMode?)
     case offline

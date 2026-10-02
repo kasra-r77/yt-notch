@@ -124,6 +124,12 @@ struct ListRow: Equatable, Identifiable {
     var isCurrent: Bool
     var action: Action
 
+    /// The address of the row's artwork, for an artwork tile.
+    var artworkURL: URL? {
+        if case let .artwork(url) = tile { return url }
+        return nil
+    }
+
     /// The help tag: everything the row cuts short, in full.
     var help: String {
         [title, subtitle ?? ""].filter { !$0.isEmpty }.joined(separator: " — ")

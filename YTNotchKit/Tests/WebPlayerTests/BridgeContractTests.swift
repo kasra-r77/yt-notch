@@ -65,6 +65,14 @@ struct BridgeContractTests {
         ]))
     }
 
+    @Test func artwork() {
+        let body: [String: Any] = ["type": "artwork", "url": "https://x.test/a.jpg", "mediaType": "image/png", "data": "AQID"]
+        #expect(Bridge.event(from: body) == .artwork(url: URL(string: "https://x.test/a.jpg")!, data: Data([1, 2, 3])))
+        #expect(Bridge.event(from: ["type": "artwork", "url": "https://x.test/a.jpg", "data": "not base64!"]) == nil)
+        #expect(Bridge.event(from: ["type": "artwork", "url": "https://x.test/a.jpg", "data": ""]) == nil)
+        #expect(Bridge.event(from: ["type": "artwork", "data": "AQID"]) == nil)
+    }
+
     @Test func modes() {
         #expect(Bridge.event(from: ["type": "modes", "shuffle": true, "repeat": "one"]) == .modes(shuffle: true, repeatMode: .one))
         #expect(Bridge.event(from: ["type": "modes", "shuffle": true, "repeat": "sometimes"]) == .modes(shuffle: true, repeatMode: nil))

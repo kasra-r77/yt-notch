@@ -6,6 +6,9 @@
 // `window.__ytNotch.refresh()` makes it report everything again, for recovery and wake.
 // The contract is in the plan, section "Web bridge contract".
 //
+// The app downloads nothing itself: the pictures it shows (the track's artwork, the queue's
+// thumbnails) come from here, read through the page.
+//
 // All Google-specific knowledge in the app lives in this file. Plain JavaScript, no
 // dependencies, shipped inside the app and never downloaded. It never throws: a lookup that
 // fails is reported in a `health` message. It keeps no state the app depends on, and after
@@ -68,6 +71,9 @@
   };
 
   const ARTWORK_MIN_PX = 192;
+  // Pictures larger than this are not handed over; the app shows its placeholder.
+  const ARTWORK_MAX_BYTES = 1000000;
+  const ARTWORK_READS_AT_ONCE = 2;
   const HEARTBEAT_PLAYING_MS = 1000;
   const HEARTBEAT_PAUSED_MS = 3000;
   const MEDIA_EVENTS = ['play', 'playing', 'pause', 'ended', 'seeked', 'durationchange', 'loadedmetadata', 'emptied', 'ratechange'];
@@ -81,6 +87,10 @@
   let lastQueueJSON = null;
   let lastModesJSON = null;
   let reportTimer = null;
+  // Pictures in use that were sent, or tried, since the page loaded; and those waiting.
+  const artworkTried = new Set();
+  const artworkWaiting = [];
+  let artworkReading = 0;
   let pulseTimer = null;
 
   const attempt = (fn, fallback) => {
@@ -266,6 +276,57 @@
     };
   }
 
+  // MARK: Artwork
+
+  // Hands over the pictures in use, each once while it stays in use. One that can't be read
+  // is not tried again until it has left use and come back, so nothing retries in a loop.
+  function requestArtwork(urls) {
+    const inUse = new Set(urls.filter((url) => typeof url === 'string' && url));
+    for (const url of Array.from(artworkTried)) {
+      if (!inUse.has(url)) artworkTried.delete(url);
+    }
+    for (const url of inUse) {
+      if (artworkTried.has(url)) continue;
+      artworkTried.add(url);
+      artworkWaiting.push(url);
+    }
+    readWaitingArtwork();
+  }
+
+  function readWaitingArtwork() {
+    while (artworkReading < ARTWORK_READS_AT_ONCE && artworkWaiting.length) {
+      const url = artworkWaiting.shift();
+      if (!artworkTried.has(url)) continue;
+      artworkReading += 1;
+      readArtwork(url)
+        .then((picture) => {
+          if (picture && artworkTried.has(url)) post('artwork', picture);
+        })
+        .catch(() => {})
+        .finally(() => {
+          artworkReading -= 1;
+          readWaitingArtwork();
+        });
+    }
+  }
+
+  // The page's own request for a picture it shows: from its cache where it can be, and
+  // without cookies. Resolves to { url, mediaType, data } with the bytes in base64, or null.
+  // (Not `type`: that names the message.)
+  async function readArtwork(url) {
+    const response = await window.fetch(url, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    if (!/^image\//.test(blob.type) || blob.size === 0 || blob.size > ARTWORK_MAX_BYTES) return null;
+    const dataURL = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+    return { url, mediaType: blob.type, data: dataURL.slice(dataURL.indexOf(',') + 1) };
+  }
+
   // MARK: Reporting
 
   function scheduleReport() {
@@ -301,6 +362,8 @@
         lastQueueJSON = queueJSON;
         post('queue', { items: queue });
       }
+
+      requestArtwork([state.artworkURL].concat(queue.map((item) => item.artworkURL)));
 
       const modes = readModes();
       const modesJSON = JSON.stringify(modes);

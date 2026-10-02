@@ -21,6 +21,9 @@
     no-repeat       there is no repeat button
     other-language  the repeat button's labels are not in English
     autoplay        the first track starts playing as the page loads
+    art-fails       requests for pictures fail
+    art-big         pictures are too large to hand over
+    art-not-image   picture addresses answer with something that isn't a picture
   `window.fixture` lets tests drive the page: advance time, switch tracks, sign out, and so on.
 -->
 <script>
@@ -57,6 +60,31 @@
     sizes: size + 'x' + size,
     type: 'image/jpeg',
   }));
+
+  // The pictures behind those addresses. The page answers its own requests for them, so
+  // tests never touch the network: tracks a, b and c are red, blue and green. Requests are
+  // recorded with their options. Options break them: art-fails (the request fails),
+  // art-big (too large to hand over), art-not-image (not a picture).
+  const PICTURES = {
+    a: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGO4o6EBRwzEcQDzAxLBI9OCRQAAAABJRU5ErkJggg==',
+    b: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGPQCLgDRwzEcQAdkhVBx4FAOAAAAABJRU5ErkJggg==',
+    c: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGPQ2BIFRwzEcQD04xNhFoFsxAAAAABJRU5ErkJggg==',
+  };
+  window.fixture.pictures = PICTURES;
+  window.fixture.artRequests = [];
+  const pageFetch = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    const url = String(input && input.url ? input.url : input);
+    const match = /^https:\/\/fixture\.ytnotch\.test\/art\/([a-z])-\d+\.jpg$/.exec(url);
+    if (!match) return pageFetch(input, init);
+    const request = init || {};
+    window.fixture.artRequests.push({ url, cache: request.cache, credentials: request.credentials, mode: request.mode });
+    if (options.has('art-fails')) return Promise.reject(new TypeError('Load failed'));
+    if (options.has('art-big')) return Promise.resolve(new Response(new Blob([new Uint8Array(2000000)], { type: 'image/jpeg' })));
+    if (options.has('art-not-image')) return Promise.resolve(new Response(new Blob(['<html></html>'], { type: 'text/html' })));
+    const bytes = Uint8Array.from(atob(PICTURES[match[1]] || PICTURES.a), (character) => character.charCodeAt(0));
+    return Promise.resolve(new Response(new Blob([bytes], { type: 'image/png' })));
+  };
 
   // Signed out, the top bar has the site's sign-in link. Clicking it is only counted, so
   // tests never leave the fixture.

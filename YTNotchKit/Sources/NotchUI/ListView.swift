@@ -19,10 +19,16 @@ struct ListView: View {
         let p = ListPresentation(view, state: state, forced: model.forcedState)
         VStack(spacing: 0) {
             band(p)
-            ListBody(presentation: p, accent: SwiftUI.Color(accent: model.accent), reduceMotion: model.reduceMotion, actions: actions)
+            ListBody(presentation: p, accent: SwiftUI.Color(accent: model.accent), reduceMotion: model.reduceMotion, actions: actions,
+                     image: image)
                 .frame(height: S.expandedListHeight - S.expandedBand)
         }
         .frame(width: S.expandedWidth, height: S.expandedListHeight + extra, alignment: .top)
+    }
+
+    /// A row's picture, from what the page handed over.
+    private func image(_ url: URL) -> NSImage? {
+        state.artwork[url].flatMap { ArtworkImages.shared.image(for: url, data: $0) }
     }
 
     /// The switcher in the left ear with this list selected, and Open alone in the right.
@@ -45,6 +51,7 @@ struct ListBody: View {
     let accent: SwiftUI.Color
     let reduceMotion: Bool
     let actions: NotchActions
+    var image: (URL) -> NSImage? = { _ in nil }
 
     typealias S = Tokens.Size
 
@@ -57,7 +64,7 @@ struct ListBody: View {
             switch p.content {
             case let .rows(rows):
                 RowList(rows: rows, currentRowID: p.currentRowID, isPlaying: p.isPlaying, accent: accent,
-                        reduceMotion: reduceMotion, actions: actions)
+                        reduceMotion: reduceMotion, actions: actions, image: image)
                     .padding(.top, p.showsSavedLine ? 0 : S.listTop)
             case .loading:
                 LoadingRows(twoLines: p.view == .upNext)
@@ -81,6 +88,7 @@ struct RowList: View {
     let accent: SwiftUI.Color
     let reduceMotion: Bool
     let actions: NotchActions
+    var image: (URL) -> NSImage? = { _ in nil }
 
     @State private var offset: CGFloat = 0
     @State private var viewport: CGFloat = 0
@@ -96,7 +104,8 @@ struct RowList: View {
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
-                        ListRowView(row: row, isPlaying: isPlaying, accent: accent, reduceMotion: reduceMotion) {
+                        ListRowView(row: row, image: row.artworkURL.flatMap(image), isPlaying: isPlaying, accent: accent,
+                                    reduceMotion: reduceMotion) {
                             actions.play(row.action)
                         }
                         .id(row.id)
@@ -145,6 +154,8 @@ struct RowList: View {
 /// bars and the length never are. The whole row takes the click, on release.
 struct ListRowView: View {
     let row: ListRow
+    /// The track's artwork, for an artwork tile; nil shows the placeholder.
+    var image: NSImage?
     let isPlaying: Bool
     let accent: SwiftUI.Color
     let reduceMotion: Bool
@@ -155,7 +166,7 @@ struct ListRowView: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 0) {
-                RowTile(tile: row.tile)
+                RowTile(tile: row.tile, image: image)
                 VStack(alignment: .leading, spacing: S.rowLineGap) {
                     Text(row.title)
                         .font(row.isCurrent ? Tokens.Font.title : Tokens.Font.row)
@@ -228,7 +239,7 @@ private struct ListRowBody: View {
 /// A 32 tile at radius 6: an icon on white 8% for a playlist, or the track's artwork.
 struct RowTile: View {
     let tile: ListRow.Tile
-    @State private var loaded: NSImage?
+    let image: NSImage?
 
     var body: some View {
         switch tile {
@@ -241,14 +252,8 @@ struct RowTile: View {
             }
             .frame(width: Tokens.Size.thumbnail, height: Tokens.Size.thumbnail)
             .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.thumbnail, style: .continuous))
-        case let .artwork(url):
-            ArtworkTile(image: loaded ?? url.flatMap { ArtworkLoader.shared.cached($0)?.image },
-                        size: Tokens.Size.thumbnail, radius: Tokens.Radius.thumbnail)
-                .task(id: url) {
-                    loaded = nil
-                    guard let url else { return }
-                    loaded = await ArtworkLoader.shared.artwork(for: url)?.image
-                }
+        case .artwork:
+            ArtworkTile(image: image, size: Tokens.Size.thumbnail, radius: Tokens.Radius.thumbnail)
         }
     }
 }

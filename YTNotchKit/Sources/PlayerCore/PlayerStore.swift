@@ -15,6 +15,11 @@ public final class PlayerStore {
     private let engine: PlayerEngine
     private let playlistCache: PlaylistCache?
     private let now: () -> Date
+    /// Pictures in the order they arrived, oldest first, for dropping old ones.
+    private var artworkOrder: [URL] = []
+
+    /// How many pictures not in use are kept, besides those in use.
+    static let artworkKept = 64
 
     /// - Parameter playlistCache: remembers the playlist list across launches, so the
     ///   Playlists view works before the page loads and while the sidebar can't be read.
@@ -117,10 +122,31 @@ public final class PlayerStore {
             }
         case let .queue(items):
             set(\.queue, items)
+        case let .artwork(url, data):
+            artworkOrder.removeAll { $0 == url }
+            artworkOrder.append(url)
+            var artwork = state.artwork
+            artwork[url] = data
+            set(\.artwork, trimmed(artwork))
         case let .modes(shuffle, repeatMode):
             if let shuffle { set(\.shuffle, shuffle) }
             if let repeatMode { set(\.repeatMode, repeatMode) }
         }
+    }
+
+    /// Drops the oldest pictures beyond `artworkKept`, never one in use.
+    private func trimmed(_ artwork: [URL: Data]) -> [URL: Data] {
+        var excess = artworkOrder.count - Self.artworkKept
+        guard excess > 0 else { return artwork }
+        let inUse = Set([state.track?.artworkURL].compactMap { $0 } + state.queue.compactMap(\.artworkURL))
+        var artwork = artwork
+        artworkOrder.removeAll { url in
+            guard excess > 0, !inUse.contains(url) else { return false }
+            excess -= 1
+            artwork[url] = nil
+            return true
+        }
+        return artwork
     }
 
     /// Changes the status, except that a broken bridge stays broken until the page

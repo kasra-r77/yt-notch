@@ -60,6 +60,18 @@ struct WebPlayerControllerTests {
         #expect(!store.state.isAvailable(.like))
     }
 
+    /// The pictures arrive in the store from the page: the app downloads none itself.
+    @Test func picturesReachTheStoreFromThePage() async throws {
+        let store = PlayerStore(engine: WebPlayerController(configuration: try Self.fixture()))
+        try await eventually("the track's artwork") {
+            store.state.track?.artworkURL.flatMap { store.state.artwork[$0] } != nil
+        }
+        try await eventually("the queue's thumbnails") {
+            let thumbnails = store.state.queue.compactMap(\.artworkURL)
+            return !thumbnails.isEmpty && thumbnails.allSatisfy { store.state.artwork[$0] != nil }
+        }
+    }
+
     @Test func usesSafarisUserAgentAndTheBridge() throws {
         let controller = WebPlayerController(configuration: try Self.fixture())
         #expect(controller.webView.customUserAgent?.contains("Safari/") == true)

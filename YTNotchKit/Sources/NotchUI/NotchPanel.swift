@@ -29,12 +29,11 @@ public final class NotchPanel {
     private(set) var machine = HoverMachine()
     private let store: PlayerStore?
     private let pointer: PointerTracker
-    private let artwork: ArtworkLoader
+    private let images: ArtworkImages
     private var pointerObservation: Int?
     private var cachedHitPath: (outline: NotchOutline, size: CGSize, path: CGPath)?
     private var tickTask: Task<Void, Never>?
     private var lastTrackID: String?
-    private var artworkURL: URL?
     private var reduceMotionObserver: NSObjectProtocol?
 
     /// The clock the machine runs on. Tests replace it and turn `schedulesTicks` off to
@@ -52,7 +51,7 @@ public final class NotchPanel {
         self.screen = screen
         self.store = store
         self.pointer = pointer
-        artwork = .shared
+        images = .shared
         model = NotchModel(outline: .idle(on: screen), band: screen.band)
         model.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         model.expandedExtra = NotchLayout.expandedExtra(on: screen)
@@ -337,28 +336,16 @@ public final class NotchPanel {
         machine.attention(model.message != nil)
         let tabs = ListPresentation.tabs(state, forced: model.forcedState, selected: .playing)
         machine.lists(playlists: tabs.playlists, upNext: tabs.upNext)
-        loadArtwork(track?.artworkURL)
+        showArtwork(track?.artworkURL, in: state)
         apply()
     }
 
-    private func loadArtwork(_ url: URL?) {
-        guard url != artworkURL else { return }
-        artworkURL = url
-        guard let url else {
-            model.artwork = nil
-            model.accent = .white
-            return
-        }
-        if let cached = artwork.cached(url) {
-            model.artwork = cached.image
-            model.accent = cached.accent
-            return
-        }
-        Task { [weak self] in
-            guard let self, let loaded = await self.artwork.artwork(for: url), self.artworkURL == url else { return }
-            self.model.artwork = loaded.image
-            self.model.accent = loaded.accent
-        }
+    /// The track's artwork from what the page handed over, or the placeholder until it has.
+    private func showArtwork(_ url: URL?, in state: PlayerState) {
+        let artwork = url.flatMap { url in state.artwork[url].flatMap { images.artwork(for: url, data: $0) } }
+        if model.artwork !== artwork?.image { model.artwork = artwork?.image }
+        let accent = artwork?.accent ?? .white
+        if model.accent != accent { model.accent = accent }
     }
 }
 

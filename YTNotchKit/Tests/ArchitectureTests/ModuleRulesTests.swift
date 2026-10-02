@@ -52,6 +52,18 @@ struct ModuleRulesTests {
         #expect(own == ["PlayerCore"], "\(module) must not import \(own.subtracting(["PlayerCore"]).sorted())")
     }
 
+    /// The app makes no network requests of its own: the page loads everything, pictures
+    /// included (YT-40). The update check (R5.2) lives in the app target, not here.
+    @Test(arguments: ["PlayerCore", "WebPlayer", "NotchUI", "SystemMedia"])
+    func noModuleMakesItsOwnNetworkRequests(module: String) throws {
+        for file in Self.swiftFiles(in: module) {
+            let text = try String(contentsOf: file, encoding: .utf8)
+            for name in ["URLSession", "NSURLConnection", "CFNetwork", "Data(contentsOf"] {
+                #expect(!text.contains(name), "\(file.lastPathComponent) uses \(name)")
+            }
+        }
+    }
+
     @Test(arguments: ["PlayerCore", "NotchUI", "SystemMedia"])
     func onlyWebPlayerImportsWebKit(module: String) throws {
         #expect(!(try Self.imports(of: module).contains("WebKit")), "\(module) must not import WebKit")
