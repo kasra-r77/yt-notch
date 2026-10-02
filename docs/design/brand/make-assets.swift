@@ -53,64 +53,91 @@ func savePNG(_ context: CGContext, to url: URL) throws {
 
 // MARK: App icon
 
-/// The notch, its flares and the amber parts, for a body of size `body` whose top left is
-/// at `origin`. Below 40 px the artwork goes and fewer, wider bars stay (AppIconArt on the
-/// canvas).
-func drawIconContents(_ context: CGContext, origin: CGPoint, body: CGFloat) {
-    let simple = body < 40
-    let notchWidth = body * 0.6
-    let notchHeight = simple ? body * 0.32 : body * 0.26
-    let notchLeft = origin.x + (body - notchWidth) / 2
-    let top = origin.y
-    let radius = body * 0.083
-    let flare = simple ? 0 : body * 0.034
+func gradient(_ from: UInt32, _ to: UInt32) -> CGGradient {
+    CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: [color(from), color(to)] as CFArray, locations: [0, 1])!
+}
 
-    let notch = CGMutablePath()
-    notch.move(to: CGPoint(x: notchLeft - flare, y: top))
-    notch.addLine(to: CGPoint(x: notchLeft + notchWidth + flare, y: top))
+/// A notch hanging from `top`, with concave flares where it meets the top edge.
+func notchPath(left: CGFloat, top: CGFloat, width: CGFloat, height: CGFloat, radius: CGFloat, flare: CGFloat) -> CGPath {
+    let path = CGMutablePath()
+    path.move(to: CGPoint(x: left - flare, y: top))
+    path.addLine(to: CGPoint(x: left + width + flare, y: top))
     if flare > 0 {
-        notch.addArc(center: CGPoint(x: notchLeft + notchWidth + flare, y: top + flare), radius: flare,
-                     startAngle: -.pi / 2, endAngle: .pi, clockwise: true)
+        path.addArc(center: CGPoint(x: left + width + flare, y: top + flare), radius: flare, startAngle: -.pi / 2, endAngle: .pi, clockwise: true)
     }
-    notch.addLine(to: CGPoint(x: notchLeft + notchWidth, y: top + notchHeight - radius))
-    notch.addArc(tangent1End: CGPoint(x: notchLeft + notchWidth, y: top + notchHeight),
-                 tangent2End: CGPoint(x: notchLeft + notchWidth - radius, y: top + notchHeight), radius: radius)
-    notch.addLine(to: CGPoint(x: notchLeft + radius, y: top + notchHeight))
-    notch.addArc(tangent1End: CGPoint(x: notchLeft, y: top + notchHeight),
-                 tangent2End: CGPoint(x: notchLeft, y: top + notchHeight - radius), radius: radius)
-    notch.addLine(to: CGPoint(x: notchLeft, y: top + flare))
+    path.addLine(to: CGPoint(x: left + width, y: top + height - radius))
+    path.addArc(tangent1End: CGPoint(x: left + width, y: top + height), tangent2End: CGPoint(x: left + width - radius, y: top + height), radius: radius)
+    path.addLine(to: CGPoint(x: left + radius, y: top + height))
+    path.addArc(tangent1End: CGPoint(x: left, y: top + height), tangent2End: CGPoint(x: left, y: top + height - radius), radius: radius)
+    path.addLine(to: CGPoint(x: left, y: top + flare))
     if flare > 0 {
-        notch.addArc(center: CGPoint(x: notchLeft - flare, y: top + flare), radius: flare,
-                     startAngle: 0, endAngle: -.pi / 2, clockwise: true)
+        path.addArc(center: CGPoint(x: left - flare, y: top + flare), radius: flare, startAngle: 0, endAngle: -.pi / 2, clockwise: true)
     }
-    notch.closeSubpath()
-    context.addPath(notch)
+    path.closeSubpath()
+    return path
+}
+
+/// D9's C1 geometry, as fractions of the body. Below 40 px of body (about 48 px of icon) the
+/// notch grows and loses its flares, and the bars get fewer and wider.
+struct IconGeometry {
+    let body: CGFloat
+    var simple: Bool { body < 40 }
+    var notchWidth: CGFloat { body * (simple ? 0.72 : 0.64) }
+    var notchHeight: CGFloat { body * (simple ? 0.4 : 0.3) }
+    var notchLeft: CGFloat { (body - notchWidth) / 2 }
+    var radius: CGFloat { body * 0.11 }
+    var flare: CGFloat { simple ? 0 : body * 0.04 }
+
+    var bars: [CGRect] {
+        let heights: [CGFloat] = simple ? (body < 20 ? [0.16, 0.24] : [0.14, 0.22, 0.17]) : [0.12, 0.2, 0.15]
+        let width = simple ? max(1.5, body * 0.07) : body * 0.05
+        let gap = simple ? max(1, body * 0.05) : body * 0.035
+        let total = CGFloat(heights.count) * width + CGFloat(heights.count - 1) * gap
+        let bottom = notchHeight - body * (simple ? 0.09 : 0.07)
+        return heights.enumerated().map { index, height in
+            CGRect(x: (body - total) / 2 + CGFloat(index) * (width + gap), y: bottom - body * height, width: width, height: body * height)
+        }
+    }
+
+    /// The two beamed quavers, in a box of side `unit` centred below the notch.
+    var unit: CGFloat { body * (simple ? 0.4 : 0.42) }
+    var notesCentre: CGPoint { CGPoint(x: body / 2, y: body * (simple ? 0.7 : 0.655)) }
+    func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: notesCentre.x + x * unit, y: notesCentre.y + y * unit) }
+    func rect(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat) -> CGRect {
+        CGRect(origin: point(x, y), size: CGSize(width: width * unit, height: height * unit))
+    }
+    var heads: [CGRect] { [rect(-0.39, 0.175, 0.34, 0.25), rect(0.09, 0.075, 0.34, 0.25)] }
+    var headAngle: CGFloat { -22 * .pi / 180 }
+    var stems: [CGRect] { [rect(-0.15, -0.36, 0.08, 0.64), rect(0.33, -0.46, 0.08, 0.64)] }
+    var beam: [CGPoint] { [point(-0.15, -0.38), point(0.41, -0.48), point(0.41, -0.31), point(-0.15, -0.21)] }
+}
+
+func drawIconContents(_ context: CGContext, origin: CGPoint, body: CGFloat) {
+    let icon = IconGeometry(body: body)
+    context.saveGState()
+    context.translateBy(x: origin.x, y: origin.y)
+    context.addPath(notchPath(left: icon.notchLeft, top: 0, width: icon.notchWidth, height: icon.notchHeight, radius: icon.radius, flare: icon.flare))
     context.setFillColor(color(0x000000))
     context.fillPath()
 
-    if !simple {
-        let art = CGRect(x: notchLeft + body * 0.078, y: top + body * 0.063, width: body * 0.136, height: body * 0.136)
+    context.setFillColor(color(0xFFFFFF))
+    for bar in icon.bars {
+        context.addPath(CGPath(roundedRect: bar, cornerWidth: bar.width / 2, cornerHeight: bar.width / 2, transform: nil))
+    }
+    for stem in icon.stems {
+        context.addRect(stem)
+    }
+    context.addLines(between: icon.beam)
+    context.closePath()
+    context.fillPath()
+    for head in icon.heads {
         context.saveGState()
-        context.addPath(CGPath(roundedRect: art, cornerWidth: body * 0.03, cornerHeight: body * 0.03, transform: nil))
-        context.clip()
-        let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: [color(0xF5B85E), color(0xE0892E)] as CFArray, locations: [0, 1])!
-        context.drawLinearGradient(gradient, start: art.origin, end: CGPoint(x: art.maxX, y: art.maxY), options: [])
+        context.translateBy(x: head.midX, y: head.midY)
+        context.rotate(by: icon.headAngle)
+        context.fillEllipse(in: CGRect(x: -head.width / 2, y: -head.height / 2, width: head.width, height: head.height))
         context.restoreGState()
     }
-
-    let barWidth = simple ? max(1, body * 0.05) : body * 0.024
-    let gap = simple ? max(1, body * 0.045) : body * 0.019
-    let heights: [CGFloat] = simple ? (body < 20 ? [0.14, 0.2] : [0.12, 0.19, 0.15]) : [0.126, 0.19, 0.15, 0.087]
-    let barsWidth = CGFloat(heights.count) * barWidth + CGFloat(heights.count - 1) * gap
-    let barsLeft = simple ? notchLeft + (notchWidth - barsWidth) / 2 : notchLeft + notchWidth - body * 0.078 - barsWidth
-    let bottom = top + notchHeight - (simple ? body * 0.08 : body * 0.06)
-    context.setFillColor(color(0xF0A84A))
-    for (index, height) in heights.enumerated() {
-        let x = barsLeft + CGFloat(index) * (barWidth + gap)
-        let bar = CGRect(x: x, y: bottom - body * height, width: barWidth, height: body * height)
-        context.addPath(CGPath(roundedRect: bar, cornerWidth: barWidth / 2, cornerHeight: barWidth / 2, transform: nil))
-        context.fillPath()
-    }
+    context.restoreGState()
 }
 
 /// One app icon image: the macOS grid, an 824 body on a 1024 canvas, with its shadow.
@@ -125,15 +152,14 @@ func appIcon(pixels: Int) -> CGContext {
     context.saveGState()
     context.setShadow(offset: CGSize(width: 0, height: size * 0.012), blur: size * 0.03, color: color(0x000000, 0.3))
     context.addPath(shape)
-    context.setFillColor(color(0xD3D7DD))
+    context.setFillColor(color(0xE3892C))
     context.fillPath()
     context.restoreGState()
 
     context.saveGState()
     context.addPath(shape)
     context.clip()
-    let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: [color(0xF4F5F7), color(0xD3D7DD)] as CFArray, locations: [0, 1])!
-    context.drawLinearGradient(gradient, start: CGPoint(x: 0, y: rect.minY), end: CGPoint(x: 0, y: rect.maxY), options: [])
+    context.drawLinearGradient(gradient(0xF8C46E, 0xE3892C), start: CGPoint(x: 0, y: rect.minY), end: CGPoint(x: 0, y: rect.maxY), options: [])
     drawIconContents(context, origin: origin, body: body)
     context.restoreGState()
 
@@ -261,36 +287,38 @@ try savePNG(dmgBackground(scale: 2), to: brand.appendingPathComponent("dmg-backg
 // MARK: Icon Composer layers
 
 /// Full-bleed 1024 layers: Icon Composer applies the system shape, shadow and appearances.
-let b: CGFloat = 1024
+let full = IconGeometry(body: 1024)
 func n(_ value: CGFloat) -> String { String(format: "%.2f", value) }
-let notchLeft = b * 0.2, notchWidth = b * 0.6, notchHeight = b * 0.26, r = b * 0.083, f = b * 0.034
-try write("""
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs><linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F5F7"/><stop offset="1" stop-color="#D3D7DD"/></linearGradient></defs>
+func svg(_ content: String) -> String {
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1024\" height=\"1024\" viewBox=\"0 0 1024 1024\">\n\(content)\n</svg>\n"
+}
+func svgPath(_ path: CGPath) -> String {
+    var d = ""
+    path.applyWithBlock { element in
+        let p = element.pointee.points
+        switch element.pointee.type {
+        case .moveToPoint: d += "M\(n(p[0].x)) \(n(p[0].y)) "
+        case .addLineToPoint: d += "L\(n(p[0].x)) \(n(p[0].y)) "
+        case .addQuadCurveToPoint: d += "Q\(n(p[0].x)) \(n(p[0].y)) \(n(p[1].x)) \(n(p[1].y)) "
+        case .addCurveToPoint: d += "C\(n(p[0].x)) \(n(p[0].y)) \(n(p[1].x)) \(n(p[1].y)) \(n(p[2].x)) \(n(p[2].y)) "
+        case .closeSubpath: d += "Z "
+        @unknown default: break
+        }
+    }
+    return d.trimmingCharacters(in: .whitespaces)
+}
+
+try write(svg("""
+  <defs><linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F8C46E"/><stop offset="1" stop-color="#E3892C"/></linearGradient></defs>
   <rect width="1024" height="1024" fill="url(#body)"/>
-</svg>
-
-""", to: brand.appendingPathComponent("icon-body.svg"))
-try write("""
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <path fill="#000" d="M\(n(notchLeft - f)) 0 H\(n(notchLeft + notchWidth + f)) A\(n(f)) \(n(f)) 0 0 0 \(n(notchLeft + notchWidth)) \(n(f)) V\(n(notchHeight - r)) A\(n(r)) \(n(r)) 0 0 1 \(n(notchLeft + notchWidth - r)) \(n(notchHeight)) H\(n(notchLeft + r)) A\(n(r)) \(n(r)) 0 0 1 \(n(notchLeft)) \(n(notchHeight - r)) V\(n(f)) A\(n(f)) \(n(f)) 0 0 0 \(n(notchLeft - f)) 0 Z"/>
-</svg>
-
-""", to: brand.appendingPathComponent("icon-notch.svg"))
-let barWidth = b * 0.024, barGap = b * 0.019
-let barHeights: [CGFloat] = [0.126, 0.19, 0.15, 0.087]
-let barsLeft = notchLeft + notchWidth - b * 0.078 - (4 * barWidth + 3 * barGap)
-let barBottom = notchHeight - b * 0.06
-let bars = barHeights.enumerated().map { index, height in
-    "  <rect x=\"\(n(barsLeft + CGFloat(index) * (barWidth + barGap)))\" y=\"\(n(barBottom - b * height))\" width=\"\(n(barWidth))\" height=\"\(n(b * height))\" rx=\"\(n(barWidth / 2))\" fill=\"#F0A84A\"/>"
-}.joined(separator: "\n")
-try write("""
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs><linearGradient id="art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F5B85E"/><stop offset="1" stop-color="#E0892E"/></linearGradient></defs>
-  <rect x="\(n(notchLeft + b * 0.078))" y="\(n(b * 0.063))" width="\(n(b * 0.136))" height="\(n(b * 0.136))" rx="\(n(b * 0.03))" fill="url(#art)"/>
-\(bars)
-</svg>
-
-""", to: brand.appendingPathComponent("icon-amber.svg"))
+"""), to: brand.appendingPathComponent("icon-body.svg"))
+let notch = notchPath(left: full.notchLeft, top: 0, width: full.notchWidth, height: full.notchHeight, radius: full.radius, flare: full.flare)
+try write(svg("  <path fill=\"#000\" d=\"\(svgPath(notch))\"/>"), to: brand.appendingPathComponent("icon-notch.svg"))
+let degrees = n(full.headAngle * 180 / .pi)
+let marks = full.bars.map { "  <rect x=\"\(n($0.minX))\" y=\"\(n($0.minY))\" width=\"\(n($0.width))\" height=\"\(n($0.height))\" rx=\"\(n($0.width / 2))\"/>" }
+    + full.stems.map { "  <rect x=\"\(n($0.minX))\" y=\"\(n($0.minY))\" width=\"\(n($0.width))\" height=\"\(n($0.height))\"/>" }
+    + ["  <polygon points=\"\(full.beam.map { "\(n($0.x)),\(n($0.y))" }.joined(separator: " "))\"/>"]
+    + full.heads.map { "  <ellipse cx=\"\(n($0.midX))\" cy=\"\(n($0.midY))\" rx=\"\(n($0.width / 2))\" ry=\"\(n($0.height / 2))\" transform=\"rotate(\(degrees) \(n($0.midX)) \(n($0.midY)))\"/>" }
+try write(svg("<g fill=\"#FFF\">\n" + marks.joined(separator: "\n") + "\n</g>"), to: brand.appendingPathComponent("icon-marks.svg"))
 
 print("Wrote the app icon, menu bar icons, disk image background and Icon Composer layers.")
