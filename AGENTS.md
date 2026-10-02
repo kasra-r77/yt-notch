@@ -64,6 +64,7 @@ swift test --package-path YTNotchKit
 - The fixture page the bridge is tested against: `YTNotchKit/Tests/WebPlayerTests/Fixtures/fake-player.html`. Web view tests must wait with `await` (see `BridgeHarness`); spinning the run loop blocks WebKit under `swift test`.
 - Design specs: `docs/design/` (D1: `notch-shapes.md`)
 - The notch: `YTNotchKit/Sources/NotchUI`. `NotchDisplayManager` keeps one notch per chosen display and follows display, Space and full-screen changes; `NotchPanel` is one display's notch, `ScreenGeometry` what it reads from the screen (never hard-code notch or menu bar sizes), `NotchShape` the spec's path. Hit-test paths with `CGPath.contains`; SwiftUI's `Path.contains` misreads the joined outline.
+- Design values: `YTNotchKit/Sources/NotchUI/Tokens.swift` holds the D1 tokens. Sizes and timings come from there, never from literals in code. `HoverMachine` is the hover logic (plain, no views or timers).
 - What the site exposes, and what it doesn't: `docs/spike-report.md`
 - The live check against the real site: `docs/live-check.md`. Run it after any change to `bridge.js` and record the run there.
 - Decisions outside the plan: `docs/decisions.md`

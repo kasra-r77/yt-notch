@@ -128,7 +128,7 @@ struct NotchRootView: View {
         NotchShape(model.outline)
             .fill(Color.black)
             .opacity(model.isHidden || !hasAppeared ? 0 : 1)
-            .animation(.linear(duration: Metrics.fade), value: model.isHidden || !hasAppeared)
+            .animation(.linear(duration: Tokens.Timing.fade), value: model.isHidden || !hasAppeared)
             .onAppear { hasAppeared = true }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
