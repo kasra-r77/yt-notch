@@ -1,0 +1,54 @@
+name: Release
+
+# Builds the disk image (scripts/make-dmg.sh) and, for a version tag such as v0.1.0, attaches
+# it to a GitHub release. The app is signed ad hoc and not notarised: there is no Developer ID
+# yet (see docs/decisions.md). Pull requests that change the release itself build the image
+# too, without releasing it, so a broken release is caught before a tag.
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - scripts/make-dmg.sh
+      - .github/workflows/release.yml
+      - docs/design/brand/dmg-background*.png
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build the disk image
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install XcodeGen and create-dmg
+        run: brew install xcodegen create-dmg
+
+      - name: Build the disk image
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export EXPECTED_VERSION="${GITHUB_REF_NAME#v}"; fi
+          echo "dmg=$(scripts/make-dmg.sh | tail -n 1)" >> "$GITHUB_ENV"
+
+      - name: Keep the image with the run
+        uses: actions/upload-artifact@v4
+        with:
+          name: disk-image
+          path: ${{ env.dmg }}
+          if-no-files-found: error
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$dmg" \
+            --title "YT Notch ${GITHUB_REF_NAME#v}" \
+            --generate-notes

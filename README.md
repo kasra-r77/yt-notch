@@ -59,6 +59,8 @@ xcodegen generate
 xcodebuild -scheme YTNotch build
 ```
 
+To build the disk image a release ships, run `scripts/make-dmg.sh`; it writes `dist/YT-Notch-<version>.dmg`, laid out as D6 has it when `create-dmg` is installed (`brew install create-dmg`). Pushing a version tag such as `v0.1.0` makes the Release workflow build it and attach it to a GitHub release.
+
 The Xcode project is generated from `project.yml` and is not committed. The app is `YT Notch.app` under Xcode's DerivedData; open `YTNotch.xcodeproj` in Xcode to run it from there.
 
 ### Running a development build
