@@ -1,0 +1,34 @@
+name: Bug report
+description: Something else in YT Notch isn't working as it should.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can it be repeated?
+      placeholder: |
+        1. …
+        2. …
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Menu bar icon › Copy Diagnostics, then paste here. It holds nothing from your account or what you listen to.
+      render: text
+  - type: input
+    id: mac
+    attributes:
+      label: Mac
+      description: The model, and whether it has a notch, if it matters here.

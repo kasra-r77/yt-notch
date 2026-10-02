@@ -1,0 +1,31 @@
+name: Player stopped working
+description: The notch says "Player needs an update", or a control stopped doing anything.
+title: "Player stopped working: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        YouTube Music changes now and then, and the part of YT Notch that reads it has to follow. Thanks for reporting it.
+
+        Please paste the report from the menu bar icon › **Copy Diagnostics**. It holds versions, the player's health and the app's recent log, and nothing from your account or what you listen to.
+  - type: textarea
+    id: what
+    attributes:
+      label: What stopped working?
+      description: For example "Next does nothing", or "the notch says Player needs an update".
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Menu bar icon › Copy Diagnostics, then paste here.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: since
+    attributes:
+      label: Since when?
+      description: Roughly when it started, if you know.
