@@ -3,7 +3,7 @@ import PlayerCore
 import Testing
 @testable import WebPlayer
 
-/// The pictures the bridge hands over (YT-40): the track's artwork and the queue's
+/// The pictures the bridge hands over: the track's artwork and the queue's
 /// thumbnails, read through the page, each once while in use. The fixture answers the
 /// page's requests for them itself, so nothing here touches the network.
 @MainActor

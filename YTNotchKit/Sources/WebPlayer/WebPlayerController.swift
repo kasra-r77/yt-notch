@@ -5,7 +5,7 @@ import PlayerCore
 import WebKit
 
 /// The one web view for the app's lifetime. It never reads the page itself; that is the
-/// bridge's job. Recovery follows the plan's failure table.
+/// bridge's job.
 @MainActor
 public final class WebPlayerController: NSObject, PlayerEngine {
     @MainActor
@@ -459,7 +459,6 @@ extension WebPlayerController: WKNavigationDelegate, WKUIDelegate {
     }
 }
 
-/// The defaults are the plan's; tests shorten them.
 public struct RecoveryTiming: Sendable {
     /// The last one repeats for as long as the page can't load.
     public var retryDelays: [TimeInterval] = [2, 5, 15, 60]

@@ -1,6 +1,6 @@
 # Working on YT Notch
 
-Read this before changing anything. The plan is the source of truth for what to build: [YT Notch: architecture and agent build plan](https://claude.ai/code/artifact/ba6e79a8-515e-4999-9f4f-8edc8d25d893). Work is tracked in Jira, project YT, epic YT-1.
+Read this before changing anything. Work is tracked in [GitHub issues](https://github.com/kasra-r77/yt-notch/issues), and `docs/design.md` describes how the app looks and behaves.
 
 ## Standing rules
 
@@ -12,8 +12,8 @@ Read this before changing anything. The plan is the source of truth for what to 
 6. Edit `project.yml`, never the generated Xcode project.
 7. New logic comes with tests.
 8. No new compiler warnings. The project treats warnings as errors.
-9. Explain any choice the plan did not make in the pull request description.
-10. If a "done when" point cannot be met, stop and report instead of working around it.
+9. Explain any design choice the issue or `docs/design.md` doesn't settle in the pull request description.
+10. If part of an issue cannot be done as asked, stop and say so in the issue instead of working around it.
 
 ## Modules
 
@@ -36,7 +36,7 @@ Test support lives in `YTNotchKit/Tests/EngineConformance`: scenarios every `Pla
 
 ## Architecture rules
 
-- One web view, created at launch, never recreated except by the recovery steps in the plan.
+- One web view, created at launch, never recreated except by `WebPlayerController`'s crash recovery.
 - The store runs on the main actor and is the only writer of state.
 - The notch never talks to the web view, and the web view never talks to the notch: everything goes through the store.
 - The UI only shows what the bridge reports; it never assumes a command worked.
@@ -50,13 +50,12 @@ xcodebuild -scheme YTNotch build
 swift test --package-path YTNotchKit
 ```
 
-## How a ticket becomes a change
+## How an issue becomes a change
 
-- **One ticket = one branch = one pull request.** Name the branch `yt-<number>-<short-name>` and start the PR title with the ticket key.
-- The PR description lists the ticket's "done when" points and which ones it met.
-- CI (`.github/workflows/ci.yml`, job "Build and test") must pass before merging. GitHub does not enforce this until the repo goes public (YT-39), so check it yourself before merging.
-- Build tickets labelled `needs-design` wait for their design ticket's approval. The approved values are in the ticket's "Design spec" section and in `docs/design.md`.
-- Gate tickets (G0 to G3) are hands-on reviews by the owner.
+- **One issue = one branch = one pull request.** Name the branch `<issue-number>-<short-name>`, and write `Fixes #<number>` in the PR description.
+- The PR description says what changed and how it was checked.
+- CI (`.github/workflows/ci.yml`, job "Build and test") must pass before merging; `main` requires it.
+- A change to how the app looks needs the owner's agreement in the issue first, and updates `docs/design.md`.
 
 ## Reference
 

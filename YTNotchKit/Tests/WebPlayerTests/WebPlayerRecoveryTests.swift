@@ -6,7 +6,7 @@ import Testing
 import WebKit
 @testable import WebPlayer
 
-/// Each row of the plan's failure table, triggered on purpose, with short timings.
+/// Each failure the player recovers from, triggered on purpose, with short timings.
 @MainActor
 @Suite(.serialized)
 struct WebPlayerRecoveryTests {

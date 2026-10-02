@@ -5,7 +5,7 @@ import SwiftUI
 import Testing
 @testable import NotchUI
 
-/// The notch shows only the pictures the page handed over (YT-40); it downloads nothing.
+/// The notch shows only the pictures the page handed over; it downloads nothing.
 @MainActor
 @Suite(.serialized)
 struct ArtworkTests {

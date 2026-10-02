@@ -53,7 +53,7 @@ struct ModuleRulesTests {
     }
 
     /// The app makes no network requests of its own: the page loads everything, pictures
-    /// included (YT-40). The update check (R5.2) lives in the app target, not here.
+    /// included. The update check lives in the app target, not here.
     @Test(arguments: ["PlayerCore", "WebPlayer", "NotchUI", "SystemMedia"])
     func noModuleMakesItsOwnNetworkRequests(module: String) throws {
         for file in Self.swiftFiles(in: module) {
