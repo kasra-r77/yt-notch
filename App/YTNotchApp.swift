@@ -14,6 +14,8 @@ import WebPlayer
 struct YTNotchApp: App {
     @State private var store: PlayerStore
     private let webPlayer: WebPlayerController?
+    /// One notch for now, on the built-in or main display; N2.2 adds the rest.
+    private let notch: NotchPanel?
 
     init() {
         if UserDefaults.standard.string(forKey: "engine") == "web" {
@@ -24,6 +26,7 @@ struct YTNotchApp: App {
             webPlayer = nil
             _store = State(initialValue: PlayerStore(engine: FakeEngine(runsClock: true)))
         }
+        notch = NotchPanel.onPreferredDisplay()
     }
 
     var body: some Scene {
