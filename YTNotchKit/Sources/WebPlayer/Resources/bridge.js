@@ -57,7 +57,10 @@
     queueItemTitle: '.song-title',
     queueItemArtist: '.byline',
     queueItemPlayButton: 'ytmusic-play-button-renderer',
-    // Each item's thumbnail and its length as text ("3:45").
+    // Each item's thumbnail and its length as text ("3:45"). The item's `img` loads only once
+    // it scrolls into view in the site's queue panel; until then its src is a placeholder.
+    // So the thumbnail comes first from the item's data, a property like the sidebar's:
+    // `data.thumbnail.thumbnails`, the same picture at several sizes (checked 2026-10-02).
     queueItemThumbnail: 'img',
     queueItemDuration: '.duration',
 
@@ -71,6 +74,8 @@
   };
 
   const ARTWORK_MIN_PX = 192;
+  // Up next shows thumbnails 32 points square: 64 pixels on a Retina screen.
+  const QUEUE_THUMBNAIL_MIN_PX = 64;
   // Pictures larger than this are not handed over; the app shows its placeholder.
   const ARTWORK_MAX_BYTES = 1000000;
   const ARTWORK_READS_AT_ONCE = 2;
@@ -247,8 +252,16 @@
     }));
   }
 
-  // A web address only: the site shows placeholders before its thumbnails load.
+  // From the item's data, the smallest size at least QUEUE_THUMBNAIL_MIN_PX wide (else the
+  // largest), whether or not the page has loaded the image; failing that, the image once it
+  // has loaded. Web addresses only: before it loads, the site shows a placeholder.
   function readThumbnail(item) {
+    const sizes = attempt(() => Array.from(item.data.thumbnail.thumbnails), [])
+      .map((size) => ({ src: size && typeof size.url === 'string' ? size.url : '', width: Number(size && size.width) || 0 }))
+      .filter((size) => /^https?:/.test(size.src))
+      .sort((a, b) => a.width - b.width);
+    const picked = sizes.find((size) => size.width >= QUEUE_THUMBNAIL_MIN_PX) || sizes[sizes.length - 1];
+    if (picked) return picked.src;
     const src = attempt(() => String(item.querySelector(PAGE.queueItemThumbnail).src || ''), '');
     return /^https?:/.test(src) ? src : null;
   }

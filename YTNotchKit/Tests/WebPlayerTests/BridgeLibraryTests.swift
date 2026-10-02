@@ -25,10 +25,20 @@ struct BridgeLibraryTests {
         let items = try await page.any("queue") { $0.queue }
         #expect(items.map(\.duration) == [200, 150, 90])
         #expect(items.map(\.artworkURL?.absoluteString) == [
+            "https://fixture.ytnotch.test/art/a-120.jpg",
+            "https://fixture.ytnotch.test/art/b-120.jpg",
+            "https://fixture.ytnotch.test/art/c-120.jpg",
+        ], "from each item's data, the smallest at least 64 wide, loaded or not")
+    }
+
+    @Test func withoutItsDataAQueueItemFallsBackToItsLoadedImage() async throws {
+        try await page.load("no-queue-data")
+        let items = try await page.any("queue") { $0.queue }
+        #expect(items.map(\.artworkURL?.absoluteString) == [
             "https://fixture.ytnotch.test/art/a-60.jpg",
-            "https://fixture.ytnotch.test/art/b-60.jpg",
             nil,
-        ], "a thumbnail that hasn't loaded is left out")
+            nil,
+        ], "an image that hasn't loaded is left out")
     }
 
     @Test func thePlaylistPlayingNowComesFromTheAddress() async throws {

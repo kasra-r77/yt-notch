@@ -24,6 +24,7 @@
     art-fails       requests for pictures fail
     art-big         pictures are too large to hand over
     art-not-image   picture addresses answer with something that isn't a picture
+    no-queue-data   queue items carry no data, so only loaded images give thumbnails
   `window.fixture` lets tests drive the page: advance time, switch tracks, sign out, and so on.
 -->
 <script>
@@ -176,14 +177,21 @@
 
   // The queue: one item per track, with its thumbnail and length. The second comes as a
   // song/video pair, and one Autoplay suggestion follows; the bridge must leave out the
-  // counterpart and the suggestion. The third track's thumbnail hasn't loaded yet.
+  // counterpart and the suggestion. Like the site, each item carries its data as a property
+  // with its thumbnail at three sizes, and only the first item's image has loaded: the
+  // others haven't been scrolled into view (option no-queue-data leaves the data out).
   const queueItems = [];
   const clock = (seconds) => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
   function queueItem(track, trackIndex) {
     const item = document.createElement('ytmusic-player-queue-item');
     item.setAttribute('play-button-state', 'default');
     const thumbnail = document.createElement('img');
-    thumbnail.src = track.id && track.id !== 'c' ? 'https://fixture.ytnotch.test/art/' + track.id + '-60.jpg' : 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    thumbnail.src = track.id === 'a' ? 'https://fixture.ytnotch.test/art/a-60.jpg' : 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    if (track.id && !options.has('no-queue-data')) {
+      item.data = {
+        thumbnail: { thumbnails: [120, 60, 226].map((size) => ({ url: 'https://fixture.ytnotch.test/art/' + track.id + '-' + size + '.jpg', width: size, height: size })) },
+      };
+    }
     const length = document.createElement('yt-formatted-string');
     length.className = 'duration';
     length.textContent = track.duration ? clock(track.duration) : '';
