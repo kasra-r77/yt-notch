@@ -25,8 +25,11 @@ struct YTNotchApp: App {
             webPlayer = player
             store = PlayerStore(engine: player, playlistCache: UserDefaultsPlaylistCache())
             notches = NotchDisplayManager(store: store)
-            notches.openFullWindow = { player.showWindow() }
+            // Open, and Sign In while signed out, which goes to the site's sign-in.
+            notches.openFullWindow = { player.showWindow(signIn: store.state.health.status == .signedOut) }
             notches.retry = { player.retry() }
+            // Once the app has finished launching: the first launch opens on sign-in.
+            Task { @MainActor in player.openOnFirstLaunch() }
         } else {
             let engine = FakeEngine(runsClock: true)
             webPlayer = nil

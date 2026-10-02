@@ -426,6 +426,13 @@
         scheduleReport();
       })();
     },
+    // Not a player command: the full window uses it to open the site's own sign-in, which
+    // goes on to Google's pages. Fails when there is no sign-in link (already signed in).
+    signIn() {
+      const link = find(PAGE.signInLink);
+      if (!link) throw new Error('no sign-in link');
+      link.click();
+    },
   };
 
   // Runs a command and says whether it could. Its effect arrives later as a state message.

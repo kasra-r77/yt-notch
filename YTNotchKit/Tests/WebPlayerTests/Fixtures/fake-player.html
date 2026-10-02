@@ -58,14 +58,24 @@
     type: 'image/jpeg',
   }));
 
+  // Signed out, the top bar has the site's sign-in link. Clicking it is only counted, so
+  // tests never leave the fixture.
   const topBar = document.getElementById('top-bar');
-  if (window.fixture.loggedIn) {
-    topBar.appendChild(document.createElement('ytmusic-settings-button'));
-  } else {
+  window.fixture.signInClicks = 0;
+  function signInLink() {
     const link = document.createElement('a');
     link.href = 'https://accounts.google.com/ServiceLogin?service=youtube';
     link.textContent = 'Sign in';
-    topBar.appendChild(link);
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      window.fixture.signInClicks += 1;
+    });
+    return link;
+  }
+  if (window.fixture.loggedIn) {
+    topBar.appendChild(document.createElement('ytmusic-settings-button'));
+  } else {
+    topBar.appendChild(signInLink());
   }
 
   // A video element whose playback is simulated: time moves only when a test advances it.
@@ -265,11 +275,7 @@
     setTrack(next) { load(next, !paused); },
     signOut() {
       window.fixture.loggedIn = false;
-      topBar.replaceChildren();
-      const link = document.createElement('a');
-      link.href = 'https://accounts.google.com/ServiceLogin?service=youtube';
-      link.textContent = 'Sign in';
-      topBar.appendChild(link);
+      topBar.replaceChildren(signInLink());
     },
     removeVideo() { fire('emptied'); video.remove(); },
     removeLikeButton() { if (likeButton.isConnected) likeButton.parentElement.remove(); },

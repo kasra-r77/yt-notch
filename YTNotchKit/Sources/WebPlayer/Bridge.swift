@@ -48,6 +48,10 @@ public enum Bridge {
         return ["name": name, "value": value]
     }
 
+    /// Opens the site's own sign-in, for the full window. Not a player command, so no
+    /// engine sends it.
+    public static var signInArguments: [String: Any] { ["name": "signIn", "value": NSNull()] }
+
     // MARK: Messages
 
     /// Turns a message body posted by the script into an event, or nil when it isn't one.

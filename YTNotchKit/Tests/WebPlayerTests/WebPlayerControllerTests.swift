@@ -12,6 +12,11 @@ import WebKit
 @Suite(.serialized)
 struct WebPlayerControllerTests {
     static func fixture(_ options: String...) throws -> WebPlayerController.Configuration {
+        try fixture(options)
+    }
+
+    /// The fixture page, with defaults of the test's own and no browser to open links in.
+    static func fixture(_ options: [String], defaults: UserDefaults? = nil) throws -> WebPlayerController.Configuration {
         guard let url = Bundle.module.url(forResource: "fake-player", withExtension: "html", subdirectory: "Fixtures") else {
             throw ConformanceFailure(description: "fake-player.html is missing from the test bundle")
         }
@@ -21,8 +26,13 @@ struct WebPlayerControllerTests {
             baseURL: URL(string: "https://fixture.ytnotch.test/#" + options.joined(separator: ","))!
         )
         configuration.dataStore = .nonPersistent()
+        configuration.defaults = defaults ?? Self.scratchDefaults
+        configuration.openInBrowser = { _ in }
         return configuration
     }
+
+    /// Shared by tests that don't look at what the window remembers.
+    static let scratchDefaults = UserDefaults(suiteName: "io.github.kasra-r77.ytnotch.tests.scratch")!
 
     init() {
         _ = NSApplication.shared
@@ -90,7 +100,7 @@ struct WebPlayerControllerTests {
         let controller = WebPlayerController(configuration: try Self.fixture())
         controller.showWindow()
         let window = try #require(controller.webView.window)
-        #expect(controller.windowShouldClose(window) == false)
+        #expect(controller.fullWindow.windowShouldClose(window) == false)
         #expect(!controller.isWindowVisible)
         #expect(window.isVisible)
     }

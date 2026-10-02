@@ -16,6 +16,30 @@ struct BridgeTests {
         #expect(page.events.first == .ready(bridgeVersion: "1", signedIn: true))
     }
 
+    /// The bridge reads the player and nothing a person types: a password typed into the
+    /// page never shows up in anything it posts.
+    @Test func neverReportsWhatIsTypedIntoThePage() async throws {
+        try await page.load()
+        let secret = "correct horse battery staple"
+        try await page.js("""
+            const form = document.createElement('form');
+            for (const type of ['email', 'password', 'text']) {
+              const input = document.createElement('input');
+              input.type = type;
+              input.name = type;
+              input.value = '\(secret)';
+              form.appendChild(input);
+            }
+            document.body.appendChild(form);
+            form.querySelectorAll('input').forEach((input) => input.dispatchEvent(new Event('input', { bubbles: true })));
+            window.__ytNotch.refresh();
+            window.fixture.advance(1);
+            """)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(page.messages.count > 3)
+        #expect(!page.messages.map { String(describing: $0) }.joined().contains(secret))
+    }
+
     @Test func readyReportsSignedOut() async throws {
         try await page.load("signed-out")
         #expect(page.events.first == .ready(bridgeVersion: "1", signedIn: false))

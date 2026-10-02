@@ -11,6 +11,10 @@ import WebKit
 /// the bridge's job. The web view lives in a real window that stays ordered in but sits far
 /// off-screen, which keeps playback going (spike report, S0.2).
 ///
+/// Brought on screen, its window is the full window (`FullWindow`) for signing in and
+/// browsing. Only the site's own pages talk to the app: the bridge also runs on the pages a
+/// sign-in passes through, and what it posts there is dropped.
+///
 /// It also recovers, as the plan's failure table says: it retries a page that failed to
 /// load, reloads after a web content crash without starting playback, re-reads everything
 /// after a wake from sleep, and when playback goes quiet it re-injects the bridge, then
@@ -32,6 +36,15 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         public var timing = RecoveryTiming()
         /// Says when the network comes back, to retry at once. Nil leaves it to the timer.
         public var networkMonitor: (any NetworkMonitor)? = PathNetworkMonitor()
+        /// Links the user follows stay in the window only on these hosts: the site and the
+        /// pages its sign-in uses. Everything else opens in the default browser.
+        public var windowHosts: Set<String> = [
+            "music.youtube.com", "accounts.google.com", "accounts.youtube.com", "consent.youtube.com", "consent.google.com",
+        ]
+        /// Where the full window keeps its frame and whether the first run is over.
+        public var defaults: UserDefaults = .standard
+        /// Opens a link outside the window.
+        public var openInBrowser: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
 
         public init() {}
     }
@@ -47,11 +60,12 @@ public final class WebPlayerController: NSObject, PlayerEngine {
     public let webView: WKWebView
     /// What `start` loads, and what a reload falls back to. Tests switch it.
     var page: Configuration.Page
+    let fullWindow: FullWindow
     private let timing: RecoveryTiming
     private let networkMonitor: (any NetworkMonitor)?
-    private let window: HostWindow
+    private let windowHosts: Set<String>
+    private let openInBrowser: @MainActor (URL) -> Void
     private var onEvent: (@MainActor (PlayerEvent) -> Void)?
-    private var hiddenFrame: NSRect
     private let log = Logger(subsystem: "io.github.kasra-r77.ytnotch", category: "WebPlayer")
 
     // Recovery. The counters are for tests and the log.
@@ -71,6 +85,13 @@ public final class WebPlayerController: NSObject, PlayerEngine {
 
     /// For tests: drops every message from the bridge, as if it had gone quiet.
     var ignoresBridgeMessages = false
+    /// Messages dropped because they came from a page other than the site.
+    private(set) var foreignMessages = 0
+
+    /// Whether the site says the user is signed in; nil until it has said.
+    private(set) var isSignedIn: Bool?
+    /// The window asked for the site's sign-in before the page could say it was needed.
+    private var signInPending = false
 
     public init(configuration: Configuration = Configuration()) {
         page = configuration.page
@@ -90,29 +111,16 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         webView.customUserAgent = configuration.userAgent
         webView.isInspectable = true
 
-        hiddenFrame = NSRect(x: -20_000, y: -20_000, width: 1100, height: 760)
-        window = HostWindow(
-            contentRect: hiddenFrame,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "YouTube Music"
-        window.isReleasedWhenClosed = false
-        window.collectionBehavior = [.transient, .ignoresCycle]
-        window.isExcludedFromWindowsMenu = true
-        window.contentView = webView
+        windowHosts = configuration.windowHosts
+        openInBrowser = configuration.openInBrowser
+        fullWindow = FullWindow(webView: webView, defaults: configuration.defaults)
 
         super.init()
 
         webView.configuration.userContentController.add(WeakMessageHandler(self), name: Bridge.messageHandlerName)
         webView.navigationDelegate = self
         webView.uiDelegate = self
-        window.delegate = self
-        // Ordered in but off-screen: invisible, yet the page keeps playing. AppKit puts a new
-        // window on screen whatever frame it is given, so move it off afterwards.
-        window.setFrame(hiddenFrame, display: false)
-        window.orderFrontRegardless()
+        fullWindow.reload = { [weak self] in self?.retry() }
     }
 
     // MARK: PlayerEngine
@@ -136,7 +144,11 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         default:
             break
         }
-        let arguments = Bridge.arguments(for: command)
+        run(Bridge.arguments(for: command))
+    }
+
+    /// Runs a bridge command in the page and logs it if it fails.
+    private func run(_ arguments: [String: Any]) {
         // The name only: values such as playlist IDs come from the user's account.
         let name = arguments["name"] as? String ?? "?"
         Task {
@@ -153,34 +165,75 @@ public final class WebPlayerController: NSObject, PlayerEngine {
 
     // MARK: The window
 
-    public var isWindowVisible: Bool { window.frame.intersects(NSScreen.screens.map(\.frame).reduce(.null) { $0.union($1) }) }
+    public var isWindowVisible: Bool { fullWindow.isVisible }
 
-    /// Brings the web view on screen, for signing in and browsing. Until the full window
-    /// (W3.3) exists, this is the only way to see the page.
-    public func showWindow() {
-        guard !isWindowVisible else {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-        window.setFrameOrigin(NSPoint(x: 0, y: 0))
-        window.center()
-        window.collectionBehavior = []
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+    /// Brings the full window on screen and the app forward. With `signIn`, it also opens
+    /// the site's own sign-in, which goes on to Google's pages, as soon as the page says it
+    /// is signed out.
+    public func showWindow(signIn: Bool = false) {
+        fullWindow.show()
+        if signIn { requestSignIn() }
     }
 
-    /// Moves the web view back off-screen. Playback continues.
+    /// Moves the full window back off-screen. The page and the music go on.
     public func hideWindow() {
-        window.collectionBehavior = [.transient, .ignoresCycle]
-        window.setFrame(hiddenFrame, display: false)
-        window.orderFrontRegardless()
+        fullWindow.hide()
+    }
+
+    /// On the very first launch, opens the full window on the site's sign-in with the
+    /// first-run bar; later launches open nothing. Says whether it opened the window.
+    @discardableResult
+    public func openOnFirstLaunch() -> Bool {
+        guard !fullWindow.hasFinishedFirstRun else { return false }
+        fullWindow.beginFirstRun()
+        fullWindow.firstRunBar.stage = isSignedIn == true ? .signedIn : .signIn
+        showWindow(signIn: true)
+        return true
+    }
+
+    private func requestSignIn() {
+        switch isSignedIn {
+        case false?: openSignIn()
+        case nil: signInPending = true
+        case true?: break
+        }
+    }
+
+    private func openSignIn() {
+        signInPending = false
+        run(Bridge.signInArguments)
+    }
+
+    /// What the site says about signing in: the first-run bar follows it, and a sign-in the
+    /// window asked for early goes ahead.
+    private func signedIn(_ signedIn: Bool) {
+        isSignedIn = signedIn
+        fullWindow.firstRunBar.stage = signedIn ? .signedIn : .signIn
+        if signedIn {
+            signInPending = false
+        } else if signInPending {
+            openSignIn()
+        }
     }
 
     // MARK: Messages
 
+    /// The site's host: only its pages talk to the app.
+    private var siteHost: String? {
+        switch page {
+        case let .url(url): url.host
+        case let .html(_, baseURL): baseURL.host
+        }
+    }
+
     fileprivate func receive(_ message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, !ignoresBridgeMessages else { return }
+        guard message.frameInfo.securityOrigin.host == siteHost else {
+            // A sign-in page, or anywhere else the window went: the bridge runs there too,
+            // but nothing from those pages reaches the app.
+            foreignMessages += 1
+            return
+        }
         guard let event = Bridge.event(from: message.body) else {
             log.notice("ignored a message the bridge contract does not know")
             return
@@ -193,9 +246,10 @@ public final class WebPlayerController: NSObject, PlayerEngine {
     private func observe(_ event: PlayerEvent) {
         let now = Date()
         switch event {
-        case .ready:
+        case let .ready(_, isSignedIn):
             log.notice("the bridge is ready")
             lastHeardAt = now
+            signedIn(isSignedIn)
             pageIsBack()
             if holdsAutoplayAfterReady {
                 holdsAutoplayAfterReady = false
@@ -219,6 +273,7 @@ public final class WebPlayerController: NSObject, PlayerEngine {
             }
         case .signedOut:
             log.notice("the page is signed out")
+            signedIn(false)
         default:
             break
         }
@@ -385,7 +440,17 @@ public final class WebPlayerController: NSObject, PlayerEngine {
     }
 }
 
-extension WebPlayerController: WKNavigationDelegate, WKUIDelegate, NSWindowDelegate {
+extension WebPlayerController: WKNavigationDelegate, WKUIDelegate {
+    /// Links the user follows out of the site and its sign-in open in the default browser.
+    public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        guard let url = navigationAction.request.url,
+              navigationAction.targetFrame?.isMainFrame ?? true,
+              LinkPolicy.opensInBrowser(url, followedLink: navigationAction.navigationType == .linkActivated, allowedHosts: windowHosts)
+        else { return .allow }
+        openInBrowser(url)
+        return .cancel
+    }
+
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         // A page on its way is not a stall.
         lastHeardAt = Date()
@@ -408,21 +473,21 @@ extension WebPlayerController: WKNavigationDelegate, WKUIDelegate, NSWindowDeleg
         reloadCurrentPage()
     }
 
-    /// Pages that open a new window (sign-in links, target=_blank) load in this one instead.
+    /// Pages that open a new window (sign-in links, target=_blank) load in this one instead,
+    /// unless they lead out of the site, which goes to the browser.
     public func webView(
         _ webView: WKWebView,
         createWebViewWith configuration: WKWebViewConfiguration,
         for navigationAction: WKNavigationAction,
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
-        if navigationAction.targetFrame == nil { webView.load(navigationAction.request) }
+        guard navigationAction.targetFrame == nil, let url = navigationAction.request.url else { return nil }
+        if LinkPolicy.opensInBrowser(url, followedLink: true, allowedHosts: windowHosts) {
+            openInBrowser(url)
+        } else {
+            webView.load(navigationAction.request)
+        }
         return nil
-    }
-
-    /// Closing the window hides it; the web view and the music keep going.
-    public func windowShouldClose(_ sender: NSWindow) -> Bool {
-        hideWindow()
-        return false
     }
 }
 
@@ -478,11 +543,6 @@ public final class PathNetworkMonitor: NetworkMonitor {
         }
         monitor.start(queue: .main)
     }
-}
-
-/// A window macOS never pulls back on screen, so it can sit far off-screen while ordered in.
-final class HostWindow: NSWindow {
-    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 }
 
 /// Holds the controller weakly, so the web view's content controller does not keep it alive.
