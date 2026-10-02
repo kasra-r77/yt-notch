@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fake player</title>
+<!--
+  A stand-in for music.youtube.com with the same standard pieces the bridge reads: Media
+  Session metadata and action handlers, a video element, the page config, the like button
+  and the sign-in markers. Playback is simulated, so tests are deterministic and need no
+  network or audio. Options come from the address's hash, comma-separated:
+    signed-out   the user is not signed in
+    no-handlers  the page registers no Media Session action handlers
+    no-like      there is no like button
+    empty        nothing is loaded: no track and no video element
+  `window.fixture` lets tests drive the page: advance time, switch tracks, sign out, and so on.
+-->
+<script>
+  const options = new Set(location.hash.slice(1).split(',').filter(Boolean));
+  window.fixture = { loggedIn: !options.has('signed-out'), errors: [] };
+  window.addEventListener('error', (event) => window.fixture.errors.push(String(event.message)));
+  window.addEventListener('unhandledrejection', (event) => window.fixture.errors.push('unhandled rejection: ' + String(event.reason)));
+  // Like the site, the page config is set early in <head>.
+  window.ytcfg = { get: (key) => (key === 'LOGGED_IN' ? window.fixture.loggedIn : undefined) };
+</script>
+</head>
+<body>
+<header id="top-bar"></header>
+<main id="player"></main>
+<footer id="actions">
+  <like-button-view-model><button aria-pressed="false" aria-label="Like">Like</button></like-button-view-model>
+</footer>
+<script>
+(() => {
+  const TRACKS = [
+    { id: 'a', title: 'First Song', artist: 'The Fixtures', album: 'Test Album', duration: 200 },
+    { id: 'b', title: 'Second Song', artist: 'The Fixtures', album: 'Test Album', duration: 150 },
+    { id: 'c', title: 'Third Song', artist: 'Someone Else', album: null, duration: 90 },
+  ];
+  const artwork = (id) => [60, 120, 226, 544].map((size) => ({
+    src: 'https://fixture.ytnotch.test/art/' + id + '-' + size + '.jpg',
+    sizes: size + 'x' + size,
+    type: 'image/jpeg',
+  }));
+
+  const topBar = document.getElementById('top-bar');
+  if (window.fixture.loggedIn) {
+    topBar.appendChild(document.createElement('ytmusic-settings-button'));
+  } else {
+    const link = document.createElement('a');
+    link.href = 'https://accounts.google.com/ServiceLogin?service=youtube';
+    link.textContent = 'Sign in';
+    topBar.appendChild(link);
+  }
+
+  // A video element whose playback is simulated: time moves only when a test advances it.
+  const video = document.createElement('video');
+  const liked = new Set();
+  let index = 0;
+  let time = 0;
+  let paused = true;
+  let ended = false;
+  const fire = (name) => video.dispatchEvent(new Event(name));
+  const current = () => TRACKS[index];
+
+  Object.defineProperties(video, {
+    paused: { configurable: true, get: () => paused },
+    ended: { configurable: true, get: () => ended },
+    duration: { configurable: true, get: () => current().duration },
+    currentTime: {
+      configurable: true,
+      get: () => time,
+      set: (value) => {
+        time = Math.max(0, Math.min(Number(value) || 0, current().duration));
+        ended = false;
+        fire('seeked');
+      },
+    },
+  });
+  video.play = () => {
+    paused = false;
+    ended = false;
+    fire('play');
+    fire('playing');
+    return Promise.resolve();
+  };
+  video.pause = () => {
+    if (paused) return;
+    paused = true;
+    fire('pause');
+  };
+
+  const likeButton = document.querySelector('like-button-view-model button');
+  const showLike = () => likeButton.setAttribute('aria-pressed', String(liked.has(current().id)));
+  likeButton.addEventListener('click', () => {
+    if (liked.has(current().id)) liked.delete(current().id);
+    else liked.add(current().id);
+    showLike();
+  });
+
+  function load(next, autoplay) {
+    index = (next + TRACKS.length) % TRACKS.length;
+    time = 0;
+    ended = false;
+    const track = current();
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title,
+      artist: track.artist,
+      album: track.album || '',
+      artwork: artwork(track.id),
+    });
+    fire('durationchange');
+    fire('loadedmetadata');
+    showLike();
+    if (autoplay) video.play();
+  }
+
+  if (options.has('empty')) {
+    likeButton.parentElement.remove();
+  } else {
+    document.getElementById('player').appendChild(video);
+    if (!options.has('no-handlers')) {
+      navigator.mediaSession.setActionHandler('play', () => video.play());
+      navigator.mediaSession.setActionHandler('pause', () => video.pause());
+      navigator.mediaSession.setActionHandler('nexttrack', () => load(index + 1, true));
+      // Like the site: after 3 seconds, previous restarts the track.
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        if (time > 3) video.currentTime = 0;
+        else load(index - 1, true);
+      });
+      navigator.mediaSession.setActionHandler('seekto', (details) => { video.currentTime = details.seekTime; });
+    }
+    load(0, false);
+  }
+  if (options.has('no-like') && likeButton.isConnected) likeButton.parentElement.remove();
+
+  Object.assign(window.fixture, {
+    /// Moves playback time on. At the end of a track the page goes to the next one.
+    advance(seconds) {
+      if (paused || !video.isConnected) return;
+      time += seconds;
+      if (time >= current().duration) {
+        time = current().duration;
+        ended = true;
+        fire('ended');
+        load(index + 1, true);
+      }
+    },
+    setTrack(next) { load(next, !paused); },
+    signOut() {
+      window.fixture.loggedIn = false;
+      topBar.replaceChildren();
+      const link = document.createElement('a');
+      link.href = 'https://accounts.google.com/ServiceLogin?service=youtube';
+      link.textContent = 'Sign in';
+      topBar.appendChild(link);
+    },
+    removeVideo() { video.remove(); fire('emptied'); },
+    removeLikeButton() { if (likeButton.isConnected) likeButton.parentElement.remove(); },
+    unregister(action) { navigator.mediaSession.setActionHandler(action, null); },
+    status() {
+      return { index, time, paused, liked: liked.has(current().id), title: current().title };
+    },
+  });
+})();
+</script>
+</body>
+</html>

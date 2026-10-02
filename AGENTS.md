@@ -57,6 +57,8 @@ swift test --package-path YTNotchKit
 
 ## Reference
 
+- The bridge: `YTNotchKit/Sources/WebPlayer/Resources/bridge.js`. Its page selectors are in the `PAGE` table at the top. Its Swift side is `Bridge.swift`.
+- The fixture page the bridge is tested against: `YTNotchKit/Tests/WebPlayerTests/Fixtures/fake-player.html`. Web view tests must wait with `await` (see `BridgeHarness`); spinning the run loop blocks WebKit under `swift test`.
 - Design specs: `docs/design/` (D1: `notch-shapes.md`)
 - What the site exposes, and what it doesn't: `docs/spike-report.md`
 - Decisions outside the plan: `docs/decisions.md`

@@ -15,10 +15,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "PlayerCore"),
-        .target(name: "WebPlayer", dependencies: ["PlayerCore"]),
+        .target(name: "WebPlayer", dependencies: ["PlayerCore"], resources: [.copy("Resources/bridge.js")]),
         .target(name: "NotchUI", dependencies: ["PlayerCore"]),
         .target(name: "SystemMedia", dependencies: ["PlayerCore"]),
         .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore"]),
+        .testTarget(name: "WebPlayerTests", dependencies: ["WebPlayer", "PlayerCore"], resources: [.copy("Fixtures")]),
         .testTarget(name: "ArchitectureTests"),
     ]
 )
