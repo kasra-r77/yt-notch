@@ -30,6 +30,8 @@ App (thin: wires modules together)
 - Only `WebPlayer` imports WebKit.
 - The app target only wires modules together.
 
+Test support lives in `YTNotchKit/Tests/EngineConformance`: scenarios every `PlayerEngine` must pass. FakeEngine and WebPlayerController both run them, and any new engine must too.
+
 `YTNotchKit/Tests/ArchitectureTests` checks the import rules on every `swift test`. Don't weaken it to make a change pass.
 
 ## Architecture rules

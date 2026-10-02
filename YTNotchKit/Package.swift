@@ -18,8 +18,10 @@ let package = Package(
         .target(name: "WebPlayer", dependencies: ["PlayerCore"], resources: [.copy("Resources/bridge.js")]),
         .target(name: "NotchUI", dependencies: ["PlayerCore"]),
         .target(name: "SystemMedia", dependencies: ["PlayerCore"]),
-        .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore"]),
-        .testTarget(name: "WebPlayerTests", dependencies: ["WebPlayer", "PlayerCore"], resources: [.copy("Fixtures")]),
+        // Test support: scenarios every PlayerEngine must pass. Not a product.
+        .target(name: "EngineConformance", dependencies: ["PlayerCore"], path: "Tests/EngineConformance"),
+        .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore", "EngineConformance"]),
+        .testTarget(name: "WebPlayerTests", dependencies: ["WebPlayer", "PlayerCore", "EngineConformance"], resources: [.copy("Fixtures")]),
         .testTarget(name: "ArchitectureTests"),
     ]
 )
