@@ -31,6 +31,32 @@
     accountButton: 'ytmusic-settings-button',
     // Shown when signed out.
     signInLink: 'a[href*="accounts.google.com/ServiceLogin"]',
+
+    // Library playlists, from the sidebar. The entries are not links: each element carries
+    // its data as a property, and `data.navigationEndpoint.browseEndpoint.browseId` is "VL"
+    // plus the playlist ID. The sidebar has no thumbnails.
+    guideEntry: 'ytmusic-guide-entry-renderer',
+    guideEntryTitle: '.title',
+    playlistBrowseIdPrefix: 'VL',
+    // Starting a playlist goes by its address on the site, a full page load.
+    playlistPath: '/watch?list=',
+
+    // The queue. `#contents` holds the playlist; Autoplay suggestions in `#automix-contents`
+    // are left out. Songs that also have a video come in pairs, and the counterpart half is
+    // left out. The current item's `play-button-state` is "playing" or "paused".
+    queueItem: 'ytmusic-player-queue #contents ytmusic-player-queue-item',
+    queueItemCounterpart: '#counterpart-renderer',
+    queueItemTitle: '.song-title',
+    queueItemArtist: '.byline',
+    queueItemPlayButton: 'ytmusic-play-button-renderer',
+
+    // Shuffle and repeat live in the player page's controls (on /watch, not the home page).
+    // Shuffle: `aria-pressed`. Repeat: `aria-pressed` is false when off, in any language;
+    // all and one differ only in the label, which is in the site's language. An unknown
+    // label reports repeat as missing rather than guessing.
+    shuffleButton: '.ytmusicPlayerControlsShuffleButton button',
+    repeatButton: '.ytmusicPlayerControlsRepeatButton button',
+    repeatLabels: { 'Repeat off': 'off', 'Repeat all': 'all', 'Repeat one': 'one' },
   };
 
   const ARTWORK_MIN_PX = 192;
@@ -43,6 +69,9 @@
   let lastSignedIn = null;
   let lastStateJSON = null;
   let lastHealthJSON = null;
+  let lastPlaylistsJSON = null;
+  let lastQueueJSON = null;
+  let lastModesJSON = null;
   let reportTimer = null;
   let pulseTimer = null;
 
@@ -65,6 +94,8 @@
   const video = () => attempt(() => document.querySelector('video'), null);
   const finite = (value) => (typeof value === 'number' && isFinite(value) ? value : null);
   const find = (selector) => attempt(() => document.querySelector(selector), null);
+  const findAll = (selector) => attempt(() => Array.from(document.querySelectorAll(selector)), []);
+  const textOf = (element) => attempt(() => (element.textContent || '').trim(), '');
 
   function readTrack() {
     const metadata = attempt(() => navigator.mediaSession.metadata, null);
@@ -119,17 +150,25 @@
     };
   }
 
-  // Names match PlayerCore's Feature. Nothing is missing while no track is loaded.
+  // Names match PlayerCore's Feature. Each feature is checked on its own, so one broken
+  // selector hides only that feature. Player controls count as missing only once a track
+  // is loaded.
   function readMissing() {
+    const missing = [];
     const media = video();
     const track = readTrack();
-    if (!media && !track) return [];
-    const missing = [];
-    if (!media) missing.push('playPause', 'seek');
-    if (!handlers.nexttrack && !(media && finite(media.duration) !== null)) missing.push('next');
-    if (!handlers.previoustrack && !media) missing.push('previous');
-    if (!find(PAGE.likeButton)) missing.push('like');
-    if (!track) missing.push('metadata');
+    if (media || track) {
+      if (!media) missing.push('playPause', 'seek');
+      if (!handlers.nexttrack && !(media && finite(media.duration) !== null)) missing.push('next');
+      if (!handlers.previoustrack && !media) missing.push('previous');
+      if (!find(PAGE.likeButton)) missing.push('like');
+      if (!track) missing.push('metadata');
+    }
+    if (!readPlaylists().length) missing.push('playlists');
+    if (!queueElements().length) missing.push('queue');
+    const modes = readModes();
+    if (modes.shuffle === null) missing.push('shuffle');
+    if (modes.repeat === null) missing.push('repeat');
     return missing;
   }
 
@@ -140,6 +179,61 @@
     if (find(PAGE.signInLink)) return false;
     if (find(PAGE.accountButton)) return true;
     return null;
+  }
+
+  // Library playlists, in sidebar order, without duplicates.
+  function readPlaylists() {
+    const items = [];
+    const seen = new Set();
+    for (const entry of findAll(PAGE.guideEntry)) {
+      const data = attempt(() => entry.data || entry.__data, null);
+      const browseId = attempt(() => data.navigationEndpoint.browseEndpoint.browseId, null);
+      if (typeof browseId !== 'string' || !browseId.startsWith(PAGE.playlistBrowseIdPrefix)) continue;
+      const id = browseId.slice(PAGE.playlistBrowseIdPrefix.length);
+      if (!id || seen.has(id)) continue;
+      const title = textOf(attempt(() => entry.querySelector(PAGE.guideEntryTitle), null))
+        || attempt(() => data.formattedTitle.runs.map((run) => run.text).join(''), '');
+      if (!title) continue;
+      seen.add(id);
+      items.push({ id, title, thumbnailURL: null });
+    }
+    return items;
+  }
+
+  // The queue's items in order; their positions are the indexes playQueueItem takes.
+  function queueElements() {
+    return findAll(PAGE.queueItem).filter((item) => !attempt(() => item.closest(PAGE.queueItemCounterpart), null));
+  }
+
+  function isCurrentQueueItem(item) {
+    const state = attempt(() => item.getAttribute('play-button-state'), null);
+    return (Boolean(state) && state !== 'default') || attempt(() => item.hasAttribute('selected'), false);
+  }
+
+  function readQueue() {
+    return queueElements().map((item, index) => ({
+      index,
+      title: textOf(attempt(() => item.querySelector(PAGE.queueItemTitle), null)),
+      artist: textOf(attempt(() => item.querySelector(PAGE.queueItemArtist), null)),
+      isCurrent: isCurrentQueueItem(item),
+    }));
+  }
+
+  // 'off', 'all', 'one', or null when the button's label is not one we know.
+  function readRepeat(button) {
+    if (attempt(() => button.getAttribute('aria-pressed'), null) === 'false') return 'off';
+    const label = attempt(() => (button.getAttribute('aria-label') || button.getAttribute('title') || '').trim(), '');
+    return Object.prototype.hasOwnProperty.call(PAGE.repeatLabels, label) ? PAGE.repeatLabels[label] : null;
+  }
+
+  // Each mode is null when it can't be read.
+  function readModes() {
+    const shuffle = find(PAGE.shuffleButton);
+    const repeat = find(PAGE.repeatButton);
+    return {
+      shuffle: shuffle ? attempt(() => shuffle.getAttribute('aria-pressed') === 'true', null) : null,
+      repeat: repeat ? readRepeat(repeat) : null,
+    };
   }
 
   // MARK: Reporting
@@ -162,6 +256,27 @@
       if (stateJSON !== lastStateJSON || (isHeartbeat && state.isPlaying)) {
         lastStateJSON = stateJSON;
         post('state', state);
+      }
+
+      const playlists = readPlaylists();
+      const playlistsJSON = JSON.stringify(playlists);
+      if (playlists.length && playlistsJSON !== lastPlaylistsJSON) {
+        lastPlaylistsJSON = playlistsJSON;
+        post('playlists', { items: playlists });
+      }
+
+      const queue = readQueue();
+      const queueJSON = JSON.stringify(queue);
+      if (queue.length && queueJSON !== lastQueueJSON) {
+        lastQueueJSON = queueJSON;
+        post('queue', { items: queue });
+      }
+
+      const modes = readModes();
+      const modesJSON = JSON.stringify(modes);
+      if ((modes.shuffle !== null || modes.repeat !== null) && modesJSON !== lastModesJSON) {
+        lastModesJSON = modesJSON;
+        post('modes', modes);
       }
 
       const missing = readMissing();
@@ -249,6 +364,37 @@
       const button = find(PAGE.likeButton);
       if (!button) throw new Error('no like button');
       if ((button.getAttribute('aria-pressed') === 'true') !== Boolean(liked)) button.click();
+    },
+    playPlaylist(id) {
+      if (typeof id !== 'string' || !id) throw new Error('no playlist id');
+      window.location.assign(window.location.origin + PAGE.playlistPath + encodeURIComponent(id));
+    },
+    playQueueItem(index) {
+      const item = queueElements()[Number(index)];
+      if (!item) throw new Error('no queue item ' + index);
+      (item.querySelector(PAGE.queueItemPlayButton) || item).click();
+    },
+    setShuffle(isOn) {
+      const button = find(PAGE.shuffleButton);
+      if (!button) throw new Error('no shuffle button');
+      if ((button.getAttribute('aria-pressed') === 'true') !== Boolean(isOn)) button.click();
+    },
+    setRepeat(mode) {
+      if (!Object.values(PAGE.repeatLabels).includes(mode)) throw new Error('unknown repeat mode: ' + mode);
+      const button = find(PAGE.repeatButton);
+      if (!button) throw new Error('no repeat button');
+      if (readRepeat(button) === null) throw new Error('repeat mode unreadable');
+      // The button cycles off, all, one; click until it shows the mode, at most twice.
+      // Stop if the label becomes unreadable, rather than click on blindly.
+      return (async () => {
+        for (let clicks = 0; clicks < 2; clicks += 1) {
+          const shown = readRepeat(button);
+          if (shown === mode || shown === null) break;
+          button.click();
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+        scheduleReport();
+      })();
     },
   };
 

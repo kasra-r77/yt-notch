@@ -25,7 +25,8 @@ public enum PlayerEvent: Equatable, Sendable {
     case signedOut
     case playlists([PlaylistItem])
     case queue([QueueItem])
-    case modes(shuffle: Bool, repeatMode: RepeatMode)
+    /// Either mode is nil when the page can't read it; the store keeps its last value.
+    case modes(shuffle: Bool?, repeatMode: RepeatMode?)
     case offline
     case bridgeBroken
 }

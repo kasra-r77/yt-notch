@@ -43,9 +43,10 @@ struct BridgeTests {
         #expect(page.messages.contains { $0["type"] as? String == "health" && $0["ok"] as? Bool == true })
     }
 
-    @Test func healthIsQuietWhenNothingIsLoaded() async throws {
+    @Test func playerControlsAreNotMissingWhenNothingIsLoaded() async throws {
         try await page.load("empty")
-        #expect(try await page.any("health") { $0.missing } == [])
+        let missing = try await page.any("health") { $0.missing }
+        #expect(missing.isDisjoint(with: [.playPause, .seek, .next, .previous, .like]))
         #expect(page.latestSnapshot?.track == nil)
     }
 

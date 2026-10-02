@@ -29,6 +29,17 @@ struct StateTests {
         #expect(store.state.playlists.isEmpty)
     }
 
+    @Test func modesUpdateOnlyWhatWasRead() {
+        let (store, engine) = Fixture.readyStore()
+        engine.emit(.modes(shuffle: true, repeatMode: .one))
+        engine.emit(.modes(shuffle: nil, repeatMode: .all))
+        #expect(store.state.shuffle)
+        #expect(store.state.repeatMode == .all)
+        engine.emit(.modes(shuffle: false, repeatMode: nil))
+        #expect(!store.state.shuffle)
+        #expect(store.state.repeatMode == .all)
+    }
+
     @Test func noTrackClearsTheTrack() {
         let (store, engine) = Fixture.readyStore()
         engine.emit(.state(PlaybackSnapshot(track: nil)))

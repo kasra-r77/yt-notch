@@ -4,14 +4,21 @@
 <meta charset="utf-8">
 <title>Fake player</title>
 <!--
-  A stand-in for music.youtube.com with the same standard pieces the bridge reads: Media
-  Session metadata and action handlers, a video element, the page config, the like button
-  and the sign-in markers. Playback is simulated, so tests are deterministic and need no
-  network or audio. Options come from the address's hash, comma-separated:
-    signed-out   the user is not signed in
-    no-handlers  the page registers no Media Session action handlers
-    no-like      there is no like button
-    empty        nothing is loaded: no track and no video element
+  A stand-in for music.youtube.com with the same pieces the bridge reads: Media Session
+  metadata and action handlers, a video element, the page config, the like button, the
+  sign-in markers, the sidebar's playlist entries, the queue, and the shuffle and repeat
+  controls. Their structure follows the site as measured in the spikes (S0.3, S0.4).
+  Playback is simulated, so tests are deterministic and need no network or audio.
+  Options come from the address's hash, comma-separated:
+    signed-out      the user is not signed in
+    no-handlers     the page registers no Media Session action handlers
+    no-like         there is no like button
+    empty           nothing is loaded: no track and no video element
+    no-sidebar      the sidebar has no playlist entries
+    no-queue        there is no queue
+    no-shuffle      there is no shuffle button
+    no-repeat       there is no repeat button
+    other-language  the repeat button's labels are not in English
   `window.fixture` lets tests drive the page: advance time, switch tracks, sign out, and so on.
 -->
 <script>
@@ -26,9 +33,16 @@
 <body>
 <header id="top-bar"></header>
 <main id="player"></main>
+<nav id="guide"></nav>
 <footer id="actions">
   <like-button-view-model><button aria-pressed="false" aria-label="Like">Like</button></like-button-view-model>
+  <div class="ytmusicPlayerControlsShuffleButton"><button aria-pressed="false" aria-label="Shuffle" title="Shuffle">Shuffle</button></div>
+  <div class="ytmusicPlayerControlsRepeatButton"><button aria-pressed="false" aria-label="Repeat off" title="Repeat off">Repeat</button></div>
 </footer>
+<ytmusic-player-queue>
+  <div id="contents"></div>
+  <div id="automix-contents"></div>
+</ytmusic-player-queue>
 <script>
 (() => {
   const TRACKS = [
@@ -79,6 +93,7 @@
   video.play = () => {
     paused = false;
     ended = false;
+    showQueue();
     fire('play');
     fire('playing');
     return Promise.resolve();
@@ -86,6 +101,7 @@
   video.pause = () => {
     if (paused) return;
     paused = true;
+    showQueue();
     fire('pause');
   };
 
@@ -96,6 +112,95 @@
     else liked.add(current().id);
     showLike();
   });
+
+  // The sidebar: navigation entries, then playlists, as the site lists them. Each entry
+  // carries its data as a property, like the site's elements.
+  const GUIDE = [
+    ['FEmusic_home', 'Home'], ['FEmusic_explore', 'Explore'], ['FEmusic_library_landing', 'Library'],
+    ['VLLM', 'Liked music'], ['VLPLfixture-mix', 'Fixture Mix'], ['VLPLfixture-focus', 'Focus'],
+    ['VLPLfixture-mix', 'Fixture Mix'], ['VLSE', 'Episodes for later'],
+  ];
+  if (!options.has('no-sidebar')) {
+    const guide = document.getElementById('guide');
+    for (const [browseId, title] of GUIDE) {
+      const entry = document.createElement('ytmusic-guide-entry-renderer');
+      entry.data = { navigationEndpoint: { browseEndpoint: { browseId } }, formattedTitle: { runs: [{ text: title }] } };
+      const titleElement = document.createElement('yt-formatted-string');
+      titleElement.className = 'title';
+      titleElement.textContent = title;
+      entry.appendChild(titleElement);
+      guide.appendChild(entry);
+    }
+  }
+
+  // The queue: one item per track. The second comes as a song/video pair, and one Autoplay
+  // suggestion follows; the bridge must leave out the counterpart and the suggestion.
+  const queueItems = [];
+  function queueItem(track, trackIndex) {
+    const item = document.createElement('ytmusic-player-queue-item');
+    item.setAttribute('play-button-state', 'default');
+    const title = document.createElement('yt-formatted-string');
+    title.className = 'song-title';
+    title.textContent = track.title;
+    const byline = document.createElement('yt-formatted-string');
+    byline.className = 'byline';
+    byline.textContent = track.artist;
+    const playButton = document.createElement('ytmusic-play-button-renderer');
+    playButton.addEventListener('click', () => load(trackIndex, true));
+    item.append(playButton, title, byline);
+    return item;
+  }
+  if (!options.has('no-queue') && !options.has('empty')) {
+    const contents = document.getElementById('contents');
+    TRACKS.forEach((track, trackIndex) => {
+      const item = queueItem(track, trackIndex);
+      queueItems.push(item);
+      if (trackIndex === 1) {
+        const pair = document.createElement('ytmusic-playlist-panel-video-wrapper-renderer');
+        const primary = document.createElement('div');
+        primary.id = 'primary-renderer';
+        primary.appendChild(item);
+        const counterpart = document.createElement('div');
+        counterpart.id = 'counterpart-renderer';
+        counterpart.appendChild(queueItem({ title: track.title + ' (video)', artist: track.artist }, trackIndex));
+        pair.append(primary, counterpart);
+        contents.appendChild(pair);
+      } else {
+        contents.appendChild(item);
+      }
+    });
+    document.getElementById('automix-contents').appendChild(queueItem({ title: 'Autoplay Suggestion', artist: 'Someone' }, 0));
+  }
+  function showQueue() {
+    queueItems.forEach((item, itemIndex) => {
+      const isCurrent = itemIndex === index;
+      item.setAttribute('play-button-state', isCurrent ? (paused ? 'paused' : 'playing') : 'default');
+      if (isCurrent) item.setAttribute('selected', ''); else item.removeAttribute('selected');
+    });
+  }
+
+  // Shuffle toggles; repeat cycles off, all, one, with its state in aria-pressed and label.
+  const shuffleButton = document.querySelector('.ytmusicPlayerControlsShuffleButton button');
+  shuffleButton.addEventListener('click', () => {
+    shuffleButton.setAttribute('aria-pressed', String(shuffleButton.getAttribute('aria-pressed') !== 'true'));
+  });
+  const REPEAT_LABELS = options.has('other-language')
+    ? { off: 'Ismétlés kikapcsolva', all: 'Összes ismétlése', one: 'Egy ismétlése' }
+    : { off: 'Repeat off', all: 'Repeat all', one: 'Repeat one' };
+  const repeatButton = document.querySelector('.ytmusicPlayerControlsRepeatButton button');
+  let repeatMode = 'off';
+  function showRepeat() {
+    repeatButton.setAttribute('aria-pressed', String(repeatMode !== 'off'));
+    repeatButton.setAttribute('aria-label', REPEAT_LABELS[repeatMode]);
+    repeatButton.setAttribute('title', REPEAT_LABELS[repeatMode]);
+  }
+  repeatButton.addEventListener('click', () => {
+    repeatMode = { off: 'all', all: 'one', one: 'off' }[repeatMode];
+    showRepeat();
+  });
+  showRepeat();
+  if (options.has('no-shuffle') || options.has('empty')) shuffleButton.parentElement.remove();
+  if (options.has('no-repeat') || options.has('empty')) repeatButton.parentElement.remove();
 
   function load(next, autoplay) {
     index = (next + TRACKS.length) % TRACKS.length;
@@ -111,6 +216,7 @@
     fire('durationchange');
     fire('loadedmetadata');
     showLike();
+    showQueue();
     if (autoplay) video.play();
   }
 
@@ -154,11 +260,15 @@
       link.textContent = 'Sign in';
       topBar.appendChild(link);
     },
-    removeVideo() { video.remove(); fire('emptied'); },
+    removeVideo() { fire('emptied'); video.remove(); },
     removeLikeButton() { if (likeButton.isConnected) likeButton.parentElement.remove(); },
     unregister(action) { navigator.mediaSession.setActionHandler(action, null); },
+    removeShuffle() { shuffleButton.parentElement.remove(); },
     status() {
-      return { index, time, paused, liked: liked.has(current().id), title: current().title };
+      return {
+        index, time, paused, liked: liked.has(current().id), title: current().title,
+        shuffle: shuffleButton.getAttribute('aria-pressed') === 'true', repeat: repeatMode,
+      };
     },
   });
 })();

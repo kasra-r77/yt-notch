@@ -67,7 +67,9 @@ struct BridgeContractTests {
 
     @Test func modes() {
         #expect(Bridge.event(from: ["type": "modes", "shuffle": true, "repeat": "one"]) == .modes(shuffle: true, repeatMode: .one))
-        #expect(Bridge.event(from: ["type": "modes", "shuffle": true, "repeat": "sometimes"]) == nil)
+        #expect(Bridge.event(from: ["type": "modes", "shuffle": true, "repeat": "sometimes"]) == .modes(shuffle: true, repeatMode: nil))
+        #expect(Bridge.event(from: ["type": "modes", "shuffle": NSNull(), "repeat": "all"]) == .modes(shuffle: nil, repeatMode: .all))
+        #expect(Bridge.event(from: ["type": "modes", "shuffle": NSNull(), "repeat": NSNull()]) == nil)
     }
 
     @Test func unknownOrMalformedMessages() {

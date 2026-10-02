@@ -19,7 +19,7 @@ struct YTNotchApp: App {
         if UserDefaults.standard.string(forKey: "engine") == "web" {
             let player = WebPlayerController()
             webPlayer = player
-            _store = State(initialValue: PlayerStore(engine: player))
+            _store = State(initialValue: PlayerStore(engine: player, playlistCache: UserDefaultsPlaylistCache()))
         } else {
             webPlayer = nil
             _store = State(initialValue: PlayerStore(engine: FakeEngine(runsClock: true)))

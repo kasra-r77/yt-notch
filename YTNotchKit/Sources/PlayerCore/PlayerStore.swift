@@ -13,11 +13,18 @@ public final class PlayerStore {
     public let state = PlayerState()
 
     private let engine: PlayerEngine
+    private let playlistCache: PlaylistCache?
     private let now: () -> Date
 
-    public init(engine: PlayerEngine, now: @escaping () -> Date = Date.init) {
+    /// - Parameter playlistCache: remembers the playlist list across launches, so the
+    ///   Playlists view works before the page loads and while the sidebar can't be read.
+    public init(engine: PlayerEngine, playlistCache: PlaylistCache? = nil, now: @escaping () -> Date = Date.init) {
         self.engine = engine
+        self.playlistCache = playlistCache
         self.now = now
+        if let cached = playlistCache?.load(), !cached.isEmpty {
+            state.playlists = cached
+        }
         engine.start { [weak self] event in
             self?.apply(event)
         }
@@ -102,11 +109,12 @@ public final class PlayerStore {
             set(\.liked, snapshot.liked)
         case let .playlists(items):
             set(\.playlists, items)
+            if !items.isEmpty { playlistCache?.save(items) }
         case let .queue(items):
             set(\.queue, items)
         case let .modes(shuffle, repeatMode):
-            set(\.shuffle, shuffle)
-            set(\.repeatMode, repeatMode)
+            if let shuffle { set(\.shuffle, shuffle) }
+            if let repeatMode { set(\.repeatMode, repeatMode) }
         }
     }
 

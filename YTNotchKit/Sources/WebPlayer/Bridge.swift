@@ -78,8 +78,9 @@ public enum Bridge {
             }
             return .queue(items)
         case "modes":
-            guard let shuffle = message["shuffle"] as? Bool,
-                  let mode = (message["repeat"] as? String).flatMap(RepeatMode.init(rawValue:)) else { return nil }
+            let shuffle = message["shuffle"] as? Bool
+            let mode = (message["repeat"] as? String).flatMap(RepeatMode.init(rawValue:))
+            guard shuffle != nil || mode != nil else { return nil }
             return .modes(shuffle: shuffle, repeatMode: mode)
         default:
             return nil

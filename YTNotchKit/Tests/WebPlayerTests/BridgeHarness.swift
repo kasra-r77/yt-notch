@@ -10,7 +10,9 @@ import WebKit
 final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     let webView: WKWebView
     private(set) var messages: [[String: Any]] = []
-    private var loaded = false
+    /// The message count when the test last acted on the page. `next` looks at everything
+    /// from here, so a reply that arrives before the test starts waiting is not missed.
+    private var actionMark = 0
 
     var events: [PlayerEvent] { messages.compactMap(Bridge.event(from:)) }
 
@@ -20,6 +22,8 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.mediaTypesRequiringUserActionForPlayback = []
+        // As in the app: no timer throttling for a page that isn't on screen.
+        configuration.preferences.inactiveSchedulingPolicy = .none
         configuration.userContentController.addUserScript(
             WKUserScript(source: Bridge.script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
@@ -50,10 +54,10 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
         }
     }
 
-    /// Waits for the next event after the current ones that matches.
+    /// Waits for an event, since the test last acted on the page, that matches.
     @discardableResult
     func next<T>(_ what: String, timeout: TimeInterval = 5, _ match: (PlayerEvent) -> T?) async throws -> T {
-        let start = messages.count
+        let start = actionMark
         var found: T?
         try await wait(what, timeout: timeout) { messages in
             found = messages.dropFirst(start).compactMap(Bridge.event(from:)).lazy.compactMap(match).first
@@ -80,6 +84,7 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
     /// Runs a command through the bridge, the way the web player will.
     @discardableResult
     func send(_ command: PlayerCommand) async throws -> [String: Any] {
+        actionMark = messages.count
         let result = try await webView.callAsyncJavaScript(
             Bridge.commandFunctionBody,
             arguments: Bridge.arguments(for: command),
@@ -91,12 +96,25 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
     /// Evaluates script in the page and returns its value.
     @discardableResult
     func js(_ source: String) async throws -> Any? {
-        try await webView.callAsyncJavaScript(source, contentWorld: .page)
+        actionMark = messages.count
+        return try await webView.callAsyncJavaScript(source, contentWorld: .page)
     }
 
     /// Errors the page caught: uncaught exceptions and unhandled rejections.
     func pageErrors() async throws -> [String] {
         try await js("return window.fixture.errors") as? [String] ?? []
+    }
+
+    /// Addresses the page tried to leave for. Only the fixture itself may load; anything
+    /// else (starting a playlist by its address) is recorded and stopped, so tests never
+    /// leave the fixture.
+    private(set) var blockedNavigations: [URL] = []
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        guard let url = navigationAction.request.url else { return .cancel }
+        if url.host == "fixture.ytnotch.test", url.path == "/" || url.path.isEmpty { return .allow }
+        blockedNavigations.append(url)
+        return .cancel
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -123,6 +141,21 @@ extension PlayerEvent {
 
     var missing: Set<Feature>? {
         if case let .health(missing) = self { return missing }
+        return nil
+    }
+
+    var playlists: [PlaylistItem]? {
+        if case let .playlists(items) = self { return items }
+        return nil
+    }
+
+    var queue: [QueueItem]? {
+        if case let .queue(items) = self { return items }
+        return nil
+    }
+
+    var modes: (shuffle: Bool?, repeatMode: RepeatMode?)? {
+        if case let .modes(shuffle, repeatMode) = self { return (shuffle, repeatMode) }
         return nil
     }
 }
