@@ -77,6 +77,8 @@ public struct HoverMachine: Equatable, Sendable {
     private var lastClose: Close?
     private var isPointerInside = false
     private var isResizing = false
+    /// After a dismiss, the pointer must leave the shape before resting on it opens it again.
+    private var waitsForPointerToLeave = false
 
     public init(timing: Timing = .tokens) {
         self.timing = timing
@@ -149,6 +151,10 @@ public struct HoverMachine: Equatable, Sendable {
         guard !isFullScreen else { return }
         switch phase {
         case .collapsed:
+            if waitsForPointerToLeave {
+                if !inside { waitsForPointerToLeave = false }
+                return
+            }
             guard inside, !buttonDown else { return }
             phase = .dwell(since: now)
             if collapsed == .peek { peekOutSince = nil }
@@ -192,6 +198,22 @@ public struct HoverMachine: Equatable, Sendable {
         guard isResizing else { return }
         isResizing = false
         if phase == .expanded, !isPointerInside { phase = .grace(since: now) }
+    }
+
+    /// Something in the open notch took the user elsewhere (Open, Sign In, Open Full
+    /// Window): it closes at once, with no grace, and stays closed until the pointer has left
+    /// the shape and come back.
+    public mutating func dismiss(at now: Date) {
+        switch phase {
+        case .expanded, .grace:
+            close(at: now)
+            waitsForPointerToLeave = isPointerInside
+        case .dwell:
+            phase = .collapsed
+            waitsForPointerToLeave = isPointerInside
+        case .collapsed:
+            break
+        }
     }
 
     /// Signed out or bridge broken: the open notch shows one message and one button

@@ -63,7 +63,19 @@ public final class NotchDisplayManager {
     @ObservationIgnored private let pointer: PointerTracker
     @ObservationIgnored private let store: PlayerStore?
     /// What Open in the notch does: show the full window. The app sets it.
-    @ObservationIgnored public var openFullWindow: (@MainActor () -> Void)?
+    @ObservationIgnored public var openFullWindow: (@MainActor () -> Void)? {
+        didSet { for panel in panels.values { panel.openFullWindow = openFullWindow } }
+    }
+    /// What Try Again does: load the page again now. The app sets it.
+    @ObservationIgnored public var retry: (@MainActor () -> Void)? {
+        didSet { for panel in panels.values { panel.retry = retry } }
+    }
+
+    /// A message or missing parts forced over what the player reports, on every notch (the
+    /// debug menu). Nil shows the real state.
+    public var forcedState: NotchForcedState? {
+        didSet { for panel in panels.values { panel.forcedState = forcedState } }
+    }
     @ObservationIgnored private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     @ObservationIgnored private var fullScreenRecheck: Task<Void, Never>?
 
@@ -126,7 +138,9 @@ public final class NotchDisplayManager {
             if let panel = panels[screen.key] {
                 panel.update(screen: screen)
             } else {
-                panels[screen.key] = NotchPanel(screen: screen, store: store, openFullWindow: { [weak self] in self?.openFullWindow?() }, pointer: pointer)
+                let panel = NotchPanel(screen: screen, store: store, openFullWindow: openFullWindow, retry: retry, pointer: pointer)
+                panel.forcedState = forcedState
+                panels[screen.key] = panel
             }
         }
         refreshFullScreen()

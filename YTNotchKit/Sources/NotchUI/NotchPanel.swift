@@ -46,6 +46,7 @@ public final class NotchPanel {
         screen: ScreenGeometry,
         store: PlayerStore? = nil,
         openFullWindow: (@MainActor () -> Void)? = nil,
+        retry: (@MainActor () -> Void)? = nil,
         pointer: PointerTracker = .shared
     ) {
         self.screen = screen
@@ -56,7 +57,11 @@ public final class NotchPanel {
         model.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         model.expandedExtra = NotchLayout.expandedExtra(on: screen)
         window = NotchWindow(frame: PanelLayout.frame(on: screen))
-        model.actions = NotchActions(store: store, openFullWindow: openFullWindow, select: { [weak self] view in self?.select(view) })
+        model.actions = NotchActions(
+            store: store, openFullWindow: openFullWindow, retry: retry,
+            select: { [weak self] view in self?.select(view) },
+            dismiss: { [weak self] in self?.dismiss() }
+        )
 
         let host = NotchHostingView(rootView: NotchRootView(model: model))
         // The panel's size is fixed by PanelLayout; the content must not resize it.
@@ -95,6 +100,34 @@ public final class NotchPanel {
         self.isFullScreen = isFullScreen
         model.isHidden = isFullScreen
         machine.fullScreen(isFullScreen, at: now())
+        apply()
+    }
+
+    /// What Open, Sign In and Open Full Window do. Nil disables them.
+    public var openFullWindow: (@MainActor () -> Void)? {
+        get { model.actions.openFullWindow }
+        set { model.actions.openFullWindow = newValue }
+    }
+
+    /// What Try Again does. Nil disables it.
+    public var retry: (@MainActor () -> Void)? {
+        get { model.actions.retry }
+        set { model.actions.retry = newValue }
+    }
+
+    /// Forces a message or missing parts over what the player reports (the debug menu).
+    public var forcedState: NotchForcedState? {
+        get { model.forcedState }
+        set {
+            guard newValue != model.forcedState else { return }
+            model.forcedState = newValue
+            if let store { read(store.state) }
+        }
+    }
+
+    /// Closes the notch at once (Open, Sign In, Open Full Window).
+    func dismiss() {
+        machine.dismiss(at: now())
         apply()
     }
 
@@ -272,7 +305,8 @@ public final class NotchPanel {
         machine.playback(hasTrack: track != nil, isPlaying: state.isPlaying)
         if let id = track?.id, let last = lastTrackID, id != last { machine.trackChanged(at: time) }
         lastTrackID = track?.id
-        machine.attention(state.health.status != .ok)
+        model.message = MessagePresentation.kind(for: state, forced: model.forcedState)
+        machine.attention(model.message != nil)
         loadArtwork(track?.artworkURL)
         apply()
     }
@@ -331,6 +365,9 @@ final class NotchModel {
     var expandedExtra: CGFloat = 0
     /// What the open notch shows, kept after it closes so the content can fade out.
     var expandedContent: HoverMachine.ExpandedContent?
+    /// The message the open notch shows instead of a view, if any.
+    var message: NotchMessage?
+    var forcedState: NotchForcedState?
     var actions = NotchActions(store: nil)
 
     init(outline: NotchOutline, band: CGFloat) {

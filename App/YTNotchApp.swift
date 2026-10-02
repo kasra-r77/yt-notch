@@ -19,19 +19,23 @@ struct YTNotchApp: App {
 
     init() {
         let store: PlayerStore
+        let notches: NotchDisplayManager
         if UserDefaults.standard.string(forKey: "engine") == "web" {
             let player = WebPlayerController()
             webPlayer = player
             store = PlayerStore(engine: player, playlistCache: UserDefaultsPlaylistCache())
+            notches = NotchDisplayManager(store: store)
+            notches.openFullWindow = { player.showWindow() }
+            notches.retry = { player.retry() }
         } else {
+            let engine = FakeEngine(runsClock: true)
             webPlayer = nil
-            store = PlayerStore(engine: FakeEngine(runsClock: true))
+            store = PlayerStore(engine: engine)
+            notches = NotchDisplayManager(store: store)
+            notches.retry = { engine.simulateReload() }
         }
         _store = State(initialValue: store)
-        notches = NotchDisplayManager(store: store)
-        if let webPlayer {
-            notches.openFullWindow = { webPlayer.showWindow() }
-        }
+        self.notches = notches
     }
 
     var body: some Scene {

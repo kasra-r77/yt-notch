@@ -86,6 +86,14 @@ public enum Tokens {
         public static let skeletonTitleTop: CGFloat = 3
         public static let knobShadowRadius: CGFloat = 1
         public static let knobShadowY: CGFloat = 1
+        // Message states (D4): centred below the band, 40 clear at the sides.
+        public static let messageIcon: CGFloat = 16
+        public static let messageIconGap: CGFloat = 6
+        public static let messageTextGap: CGFloat = 2
+        public static let messageButtonGap: CGFloat = 10
+        public static let messageInset: CGFloat = 40
+        public static let buttonHeight: CGFloat = 28
+        public static let buttonPadding: CGFloat = 14
         /// Type sizes, for the fonts below and for measuring text.
         public static let titleText: CGFloat = 13
         public static let secondaryText: CGFloat = 11
@@ -154,6 +162,7 @@ public enum Tokens {
         public static let icon = SwiftUI.Font.system(size: Size.icon, weight: .medium)
         public static let playIcon = SwiftUI.Font.system(size: Size.playIcon, weight: .medium)
         public static let artworkPlaceholderIcon = SwiftUI.Font.system(size: Size.artworkPlaceholderIcon, weight: .regular)
+        public static let messageIcon = SwiftUI.Font.system(size: Size.messageIcon, weight: .medium)
     }
 
     /// SF Symbol names for every control (D5, "Icons").

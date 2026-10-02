@@ -71,6 +71,7 @@ struct PlayerMenu: View {
 
         Divider()
         NotchDisplaysMenu(notches: notches)
+        DebugMenu(notches: notches)
 
         if let webPlayer {
             Divider()
@@ -144,5 +145,59 @@ private struct NotchDisplaysMenu: View {
         }
         if isOn { keys.insert(display.key) } else { keys.remove(display.key) }
         notches.setting = .picked(keys)
+    }
+}
+
+/// Forces each notch state without breaking anything (N2.6): the messages, and a page that
+/// only partly works. Normal shows what the player really reports.
+private struct DebugMenu: View {
+    let notches: NotchDisplayManager
+
+    var body: some View {
+        Menu("Debug") {
+            Picker("Notch State", selection: Binding(get: { Choice(notches.forcedState) }, set: { notches.forcedState = $0.forced })) {
+                ForEach(Choice.allCases, id: \.self) { choice in
+                    Text(choice.title).tag(choice)
+                }
+            }
+            .pickerStyle(.inline)
+        }
+    }
+
+    enum Choice: CaseIterable, Hashable {
+        case normal, signedOut, offline, bridgeBroken, loading, partlyWorking
+
+        init(_ forced: NotchForcedState?) {
+            switch forced {
+            case .message(.signedOut): self = .signedOut
+            case .message(.offline): self = .offline
+            case .message(.bridgeBroken): self = .bridgeBroken
+            case .message(.loading): self = .loading
+            case .missing: self = .partlyWorking
+            case nil: self = .normal
+            }
+        }
+
+        var forced: NotchForcedState? {
+            switch self {
+            case .normal: nil
+            case .signedOut: .message(.signedOut)
+            case .offline: .message(.offline)
+            case .bridgeBroken: .message(.bridgeBroken)
+            case .loading: .message(.loading)
+            case .partlyWorking: .missing([.like, .seek, .shuffle, .repeatMode])
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .normal: "Normal"
+            case .signedOut: "Signed Out"
+            case .offline: "No Connection"
+            case .bridgeBroken: "Player Needs an Update"
+            case .loading: "Loading"
+            case .partlyWorking: "Partly Working"
+            }
+        }
     }
 }

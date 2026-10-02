@@ -38,7 +38,7 @@ struct PlayingPresentation: Equatable {
     var canRepeat: Bool
 
     @MainActor
-    init(_ state: PlayerState, at now: Date) {
+    init(_ state: PlayerState, at now: Date, forced: NotchForcedState? = nil) {
         let track = state.track
         hasTrack = track != nil
         title = track?.title ?? ""
@@ -72,21 +72,27 @@ struct PlayingPresentation: Equatable {
         case .all: "Repeat All"
         case .one: "Repeat One"
         }
-        let missing = state.health.missing
+        let missing = MessagePresentation.missing(in: state, forced: forced)
+        let available = { (feature: Feature) in state.isAvailable(feature) && !missing.contains(feature) }
         showsShuffle = !missing.contains(.shuffle)
         showsRepeat = !missing.contains(.repeatMode)
-        showsPlaylistsTab = state.showsPlaylistsView
-        showsUpNextTab = state.showsQueueView
-        canPlayPause = state.isAvailable(.playPause)
-        canPrevious = state.isAvailable(.previous)
-        canNext = state.isAvailable(.next)
-        canSeek = state.isAvailable(.seek)
-        canLike = state.isAvailable(.like)
-        canShuffle = state.isAvailable(.shuffle)
-        canRepeat = state.isAvailable(.repeatMode)
+        showsPlaylistsTab = state.showsPlaylistsView && !missing.contains(.playlists)
+        showsUpNextTab = state.showsQueueView && !missing.contains(.queue)
+        canPlayPause = available(.playPause)
+        canPrevious = available(.previous)
+        canNext = available(.next)
+        canSeek = available(.seek)
+        canLike = available(.like)
+        canShuffle = available(.shuffle)
+        canRepeat = available(.repeatMode)
     }
 
     static let unknownTime = "–:––"
+
+    /// The help tag for a control: its name, or that it can't be used right now (D4).
+    static func help(_ label: String, enabled: Bool) -> String {
+        enabled ? label : "\(label) isn't available right now"
+    }
 
     /// "1:12", or "1:02:03" past an hour.
     static func time(_ seconds: TimeInterval) -> String {
@@ -106,7 +112,32 @@ struct PlayingPresentation: Equatable {
 struct NotchActions {
     let store: PlayerStore?
     var openFullWindow: (@MainActor () -> Void)?
+    /// Loads the page again now (the web player's retry).
+    var retry: (@MainActor () -> Void)?
     var select: @MainActor (HoverMachine.ExpandedView) -> Void = { _ in }
+    /// Closes the notch at once, for controls that take the user elsewhere.
+    var dismiss: @MainActor () -> Void = {}
+
+    /// Open, Sign In and Open Full Window: show the full window and close the notch. (W3.3
+    /// opens it on the sign-in page when signed out.)
+    func open() {
+        openFullWindow?()
+        dismiss()
+    }
+
+    func perform(_ action: MessagePresentation.Action) {
+        switch action {
+        case .signIn, .openFullWindow: open()
+        case .retry: retry?()
+        }
+    }
+
+    func canPerform(_ action: MessagePresentation.Action) -> Bool {
+        switch action {
+        case .signIn, .openFullWindow: openFullWindow != nil
+        case .retry: retry != nil
+        }
+    }
 
     func togglePlayPause() { store?.togglePlayPause() }
     func previous() { store?.previous() }

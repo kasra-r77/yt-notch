@@ -170,6 +170,8 @@ struct ExpandedContent: View {
         Group {
             if model.expandedContent == .view(.playing), let store = model.actions.store {
                 PlayingView(state: store.state, model: model, actions: model.actions, extra: model.expandedExtra)
+            } else if model.expandedContent == .message, let message = model.message {
+                MessageView(presentation: MessagePresentation(message), actions: model.actions, extra: model.expandedExtra)
             } else {
                 Color.clear.frame(width: model.outline.width, height: model.outline.height)
             }

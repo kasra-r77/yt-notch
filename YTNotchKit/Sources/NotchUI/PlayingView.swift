@@ -15,7 +15,7 @@ struct PlayingView: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: Tokens.Timing.progressRefresh, paused: !state.isPlaying)) { context in
-            let p = PlayingPresentation(state, at: context.date)
+            let p = PlayingPresentation(state, at: context.date, forced: model.forcedState)
             ZStack(alignment: .topLeading) {
                 band(p)
                 ArtworkTile(image: p.hasTrack ? model.artwork : nil, size: S.artwork, radius: Tokens.Radius.artwork,
@@ -45,9 +45,9 @@ struct PlayingView: View {
                 }
                 .buttonStyle(NotchControlStyle())
                 .disabled(!p.canLike)
-                .help(p.likeLabel)
+                .help(PlayingPresentation.help(p.likeLabel, enabled: p.canLike))
                 .accessibilityLabel(p.likeLabel)
-                Button(action: { actions.openFullWindow?() }) {
+                Button(action: actions.open) {
                     Image(systemName: Tokens.Symbol.open).font(Tokens.Font.icon)
                 }
                 .buttonStyle(NotchControlStyle())
@@ -120,7 +120,7 @@ struct PlayingView: View {
         }
         .buttonStyle(NotchControlStyle(quiet: quiet, isOn: isOn, hitSize: CGSize(width: S.transportHitWidth, height: height)))
         .disabled(!enabled)
-        .help(label)
+        .help(PlayingPresentation.help(label, enabled: enabled))
         .accessibilityLabel(label)
     }
 }
