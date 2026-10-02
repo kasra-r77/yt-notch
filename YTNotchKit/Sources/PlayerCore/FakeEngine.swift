@@ -30,6 +30,7 @@ public final class FakeEngine: PlayerEngine {
     private let runsClock: Bool
     private var clock: Timer?
 
+    private var playlistID: String?
     private var originalQueue: [Track] = []
     private var queue: [Track] = []
     private var currentIndex = 0
@@ -155,17 +156,20 @@ public final class FakeEngine: PlayerEngine {
             isPlaying: isPlaying,
             canNext: currentIndex + 1 < queue.count || (repeatMode == .all && !queue.isEmpty),
             canPrevious: currentTrack != nil,
-            liked: currentTrack.map { likedIDs.contains($0.id) } ?? false
+            liked: currentTrack.map { likedIDs.contains($0.id) } ?? false,
+            playlistID: playlistID
         )
     }
 
     private var queueItems: [QueueItem] {
         queue.enumerated().map { index, track in
-            QueueItem(index: index, title: track.title, artist: track.artist, isCurrent: index == currentIndex)
+            QueueItem(index: index, title: track.title, artist: track.artist, isCurrent: index == currentIndex,
+                      artworkURL: track.artworkURL, duration: track.duration)
         }
     }
 
     private func load(_ playlist: Playlist) {
+        playlistID = playlist.item.id
         originalQueue = playlist.tracks
         queue = shuffle ? shuffled(playlist.tracks, keepingFirst: playlist.tracks.first) : playlist.tracks
         currentIndex = 0
@@ -249,16 +253,24 @@ public final class FakeEngine: PlayerEngine {
 }
 
 extension FakeEngine {
-    /// Three playlists with invented tracks, one with a title long enough to truncate.
+    /// Eight playlists with invented tracks: enough of both to scroll the notch's lists, and
+    /// a title long enough to truncate.
     public static let sample: [Playlist] = [
         Playlist(
-            item: PlaylistItem(id: "LM", title: "Liked music"),
+            item: PlaylistItem(id: "LM", title: "Liked music", isLikedMusic: true),
             tracks: [
                 Track(id: "fake-01", title: "Morning Static", artist: "Paper Planes Collective", album: "Low Light", duration: 222),
                 Track(id: "fake-02", title: "A Very Long Track Title That Has To Be Cut Short In The Notch", artist: "The Ensemble With A Long Name", album: "Overflow", duration: 307),
                 Track(id: "fake-03", title: "Lanterns", artist: "Mira Holt", album: "Harbour", duration: 178),
                 Track(id: "fake-04", title: "Glass Rivers", artist: "Northbound", album: "Glass Rivers", duration: 241),
                 Track(id: "fake-05", title: "Quiet Engines", artist: "Paper Planes Collective", album: "Low Light", duration: 199),
+                Track(id: "fake-11", title: "Salt and Signal", artist: "Mira Holt", album: "Harbour", duration: 205),
+                Track(id: "fake-12", title: "Undertow", artist: "Northbound", duration: 263),
+                Track(id: "fake-13", title: "Paper Moons", artist: "Ada Vance", duration: 191),
+                Track(id: "fake-14", title: "Cold Open", artist: "The Ensemble With A Long Name", duration: 318),
+                Track(id: "fake-15", title: "Field Notes", artist: "Paper Planes Collective", album: "Low Light", duration: 174),
+                Track(id: "fake-16", title: "Last Ferry", artist: "Mira Holt", album: "Harbour", duration: 246),
+                Track(id: "fake-17", title: "Static Bloom", artist: "Northbound", duration: 229),
             ]
         ),
         Playlist(
@@ -275,6 +287,26 @@ extension FakeEngine {
                 Track(id: "fake-09", title: "Slow Return", artist: "Ada Vance", duration: 233),
                 Track(id: "fake-10", title: "Embers", artist: "The Ensemble With A Long Name", duration: 276),
             ]
+        ),
+        Playlist(
+            item: PlaylistItem(id: "PLfake-run", title: "Running"),
+            tracks: [Track(id: "fake-18", title: "Pace Setter", artist: "Northbound", duration: 201)]
+        ),
+        Playlist(
+            item: PlaylistItem(id: "PLfake-sunday", title: "Sunday Morning, Slowly, With Coffee and Nowhere to Be"),
+            tracks: [Track(id: "fake-19", title: "Linen", artist: "Ada Vance", duration: 238)]
+        ),
+        Playlist(
+            item: PlaylistItem(id: "PLfake-drive", title: "Night Drive"),
+            tracks: [Track(id: "fake-20", title: "Sodium Lights", artist: "Paper Planes Collective", duration: 255)]
+        ),
+        Playlist(
+            item: PlaylistItem(id: "PLfake-rain", title: "Rainy Days"),
+            tracks: [Track(id: "fake-21", title: "Gutter Song", artist: "Mira Holt", duration: 183)]
+        ),
+        Playlist(
+            item: PlaylistItem(id: "PLfake-old", title: "Old Favourites"),
+            tracks: [Track(id: "fake-22", title: "Second Hand", artist: "The Ensemble With A Long Name", duration: 297)]
         ),
     ]
 }

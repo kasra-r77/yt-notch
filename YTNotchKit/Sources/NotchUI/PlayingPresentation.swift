@@ -76,8 +76,7 @@ struct PlayingPresentation: Equatable {
         let available = { (feature: Feature) in state.isAvailable(feature) && !missing.contains(feature) }
         showsShuffle = !missing.contains(.shuffle)
         showsRepeat = !missing.contains(.repeatMode)
-        showsPlaylistsTab = state.showsPlaylistsView && !missing.contains(.playlists)
-        showsUpNextTab = state.showsQueueView && !missing.contains(.queue)
+        (showsPlaylistsTab, showsUpNextTab) = ListPresentation.tabs(state, forced: forced, selected: .playing)
         canPlayPause = available(.playPause)
         canPrevious = available(.previous)
         canNext = available(.next)
@@ -136,6 +135,15 @@ struct NotchActions {
         switch action {
         case .signIn, .openFullWindow: openFullWindow != nil
         case .retry: retry != nil
+        }
+    }
+
+    /// A list row's click: start the playlist, or jump to the track. The list stays put;
+    /// the marker moves when the player reports the change.
+    func play(_ action: ListRow.Action) {
+        switch action {
+        case let .playPlaylist(id): store?.playPlaylist(id: id)
+        case let .playQueueItem(index): store?.playQueueItem(index: index)
         }
     }
 

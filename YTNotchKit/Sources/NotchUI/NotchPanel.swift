@@ -66,6 +66,8 @@ public final class NotchPanel {
         let host = NotchHostingView(rootView: NotchRootView(model: model))
         // The panel's size is fixed by PanelLayout; the content must not resize it.
         host.sizingOptions = []
+        // The surface is always black, so system parts (the list's scroller) draw for dark.
+        host.appearance = NSAppearance(named: .darkAqua)
         window.contentView = host
         window.orderFrontRegardless()
 
@@ -243,11 +245,37 @@ public final class NotchPanel {
         if peek != model.peekShown {
             withAnimation(fade(in: peek, reduce: reduce)) { model.peekShown = peek }
         }
-        if case let .expanded(expandedContent) = appearance { model.expandedContent = expandedContent }
+        if case let .expanded(expandedContent) = appearance, expandedContent != model.expandedContent {
+            switchContent(to: expandedContent, switching: previous.isExpanded, reduce: reduce)
+        }
         let content = appearance.isExpanded
         if content != model.contentShown {
             withAnimation(fade(in: content, reduce: reduce)) { model.contentShown = content }
         }
+    }
+
+    /// Between views in the open notch, the old view fades out over 0.1 s at once and the new
+    /// one fades in over 0.15 s: when a resize is 60% of the way, or straight away between the
+    /// two lists, which share a size. Opening shows the view with no fade of its own: the
+    /// content as a whole fades in.
+    private func switchContent(to content: HoverMachine.ExpandedContent, switching: Bool, reduce: Bool) {
+        guard switching, let old = model.expandedContent else {
+            model.viewTransition = .identity
+            model.expandedContent = content
+            return
+        }
+        let resizes = old.isList != content.isList
+        let fadeIn: Animation
+        if reduce {
+            fadeIn = Tokens.Motion.crossfade
+        } else if resizes {
+            fadeIn = .easeOut(duration: Tokens.Timing.contentFadeIn).delay(Tokens.Timing.contentFadeInDelay)
+        } else {
+            fadeIn = .linear(duration: Tokens.Timing.contentFadeIn)
+        }
+        let fadeOut = reduce ? Tokens.Motion.crossfade : .linear(duration: Tokens.Timing.contentFadeOut)
+        model.viewTransition = .asymmetric(insertion: .opacity.animation(fadeIn), removal: .opacity.animation(fadeOut))
+        withAnimation(fadeOut) { model.expandedContent = content }
     }
 
     private func fade(in isIn: Bool, reduce: Bool) -> Animation {
@@ -258,8 +286,8 @@ public final class NotchPanel {
     }
 
     /// The shape has arrived. A peek starts its hold now; a resize lets the grace start if
-    /// it left the pointer outside.
-    private func settled() {
+    /// it left the pointer outside. Tests call it to stand for the animation finishing.
+    func settled() {
         guard !isClosed else { return }
         let time = now()
         machine.peekFullyOut(at: time)
@@ -307,6 +335,8 @@ public final class NotchPanel {
         lastTrackID = track?.id
         model.message = MessagePresentation.kind(for: state, forced: model.forcedState)
         machine.attention(model.message != nil)
+        let tabs = ListPresentation.tabs(state, forced: model.forcedState, selected: .playing)
+        machine.lists(playlists: tabs.playlists, upNext: tabs.upNext)
         loadArtwork(track?.artworkURL)
         apply()
     }
@@ -365,6 +395,8 @@ final class NotchModel {
     var expandedExtra: CGFloat = 0
     /// What the open notch shows, kept after it closes so the content can fade out.
     var expandedContent: HoverMachine.ExpandedContent?
+    /// How a view comes and goes when the open notch switches views.
+    var viewTransition: AnyTransition = .identity
     /// The message the open notch shows instead of a view, if any.
     var message: NotchMessage?
     var forcedState: NotchForcedState?

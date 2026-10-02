@@ -48,6 +48,9 @@ public struct HoverMachine: Equatable, Sendable {
         case view(ExpandedView)
         /// Signed out or bridge broken: one message and one button.
         case message
+
+        /// Lists are 300 tall; Playing and the messages 148.
+        var isList: Bool { self == .view(.playlists) || self == .view(.upNext) }
     }
 
     public struct Timing: Equatable, Sendable {
@@ -79,6 +82,8 @@ public struct HoverMachine: Equatable, Sendable {
     private var isResizing = false
     /// After a dismiss, the pointer must leave the shape before resting on it opens it again.
     private var waitsForPointerToLeave = false
+    /// The lists that have something to show. Reopening never returns to one that doesn't.
+    private var availableLists: Set<ExpandedView> = [.playlists, .upNext]
 
     public init(timing: Timing = .tokens) {
         self.timing = timing
@@ -216,6 +221,11 @@ public struct HoverMachine: Equatable, Sendable {
         }
     }
 
+    /// Which lists have something to show, so their tabs show (N2.7).
+    public mutating func lists(playlists: Bool, upNext: Bool) {
+        availableLists = Set([playlists ? .playlists : nil, upNext ? .upNext : nil].compactMap { $0 })
+    }
+
     /// Signed out or bridge broken: the open notch shows one message and one button
     /// instead of a view. It doesn't open by itself; the next hover shows it.
     public mutating func attention(_ needed: Bool) {
@@ -243,10 +253,11 @@ public struct HoverMachine: Equatable, Sendable {
     // MARK: Opening and closing
 
     /// Opens on Playing, unless it closed less than `reopenMemory` ago: then on the view it
-    /// closed on. Opening from a peek drops the peek.
+    /// closed on, if that still has something to show. Opening from a peek drops the peek.
     private mutating func open(at now: Date) {
         phase = .expanded
-        if let lastClose, now < lastClose.at.addingTimeInterval(timing.reopenMemory) {
+        if let lastClose, now < lastClose.at.addingTimeInterval(timing.reopenMemory),
+           !lastClose.view.isList || availableLists.contains(lastClose.view) {
             view = lastClose.view
         } else {
             view = .playing

@@ -17,7 +17,9 @@ struct FakeEngineTests {
         let state = store.state
         #expect(state.health == Health(status: .ok))
         #expect(state.bridgeVersion == FakeEngine.bridgeVersion)
-        #expect(state.playlists.map(\.id) == ["LM", "PLfake-focus", "PLfake-evening"])
+        #expect(state.playlists.map(\.id) == FakeEngine.sample.map(\.item.id))
+        #expect(state.playlists.first?.isLikedMusic == true)
+        #expect(state.playlistID == "LM")
         #expect(state.queue.count == liked.count)
         #expect(state.queue.first?.isCurrent == true)
         #expect(state.track == liked[0])
@@ -85,6 +87,17 @@ struct FakeEngineTests {
         #expect(store.state.liked)
         store.toggleLike()
         #expect(!store.state.liked)
+    }
+
+    @Test func queueItemsCarryTheirLengthAndArtwork() {
+        #expect(store.state.queue.map(\.duration) == liked.map(\.duration))
+        #expect(store.state.queue.map(\.artworkURL) == liked.map(\.artworkURL))
+    }
+
+    @Test func thePlaylistPlayingNowIsReported() {
+        #expect(store.state.playlistID == "LM")
+        store.playPlaylist(id: "PLfake-focus")
+        #expect(store.state.playlistID == "PLfake-focus")
     }
 
     @Test func playPlaylist() {

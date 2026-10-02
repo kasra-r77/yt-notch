@@ -19,6 +19,11 @@ public final class PlayerState {
     /// The last playlist list the bridge reported. It is kept when the bridge later reports
     /// playlists as missing, so the list stays usable.
     public internal(set) var playlists: [PlaylistItem] = []
+    /// True while `playlists` is the list remembered from an earlier launch and the page
+    /// hasn't read the sidebar yet.
+    public internal(set) var playlistsAreRemembered = false
+    /// The library playlist playing now, if the page says.
+    public internal(set) var playlistID: String?
     public internal(set) var queue: [QueueItem] = []
     public internal(set) var health = Health()
     public internal(set) var bridgeVersion: String?
@@ -48,6 +53,12 @@ public final class PlayerState {
 
     /// The Playlists tab shows while there is a list, even a remembered one.
     public var showsPlaylistsView: Bool { !playlists.isEmpty }
+
+    /// The list shown may not match the site: it is remembered from an earlier launch, or
+    /// the sidebar can't be read now.
+    public var playlistsMayBeOutOfDate: Bool {
+        !playlists.isEmpty && (playlistsAreRemembered || health.missing.contains(.playlists))
+    }
 
     /// The Up next tab hides as soon as the queue can't be read.
     public var showsQueueView: Bool { !health.missing.contains(.queue) && !queue.isEmpty }

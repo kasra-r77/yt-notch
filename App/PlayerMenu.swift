@@ -148,8 +148,9 @@ private struct NotchDisplaysMenu: View {
     }
 }
 
-/// Forces each notch state without breaking anything (N2.6): the messages, and a page that
-/// only partly works. Normal shows what the player really reports.
+/// Forces each notch state without breaking anything: the messages and a page that only
+/// partly works (N2.6), and the lists' loading, saved and empty states (N2.7). Normal shows
+/// what the player really reports.
 private struct DebugMenu: View {
     let notches: NotchDisplayManager
 
@@ -165,7 +166,7 @@ private struct DebugMenu: View {
     }
 
     enum Choice: CaseIterable, Hashable {
-        case normal, signedOut, offline, bridgeBroken, loading, partlyWorking
+        case normal, signedOut, offline, bridgeBroken, loading, partlyWorking, listsLoading, savedPlaylists, emptyLists
 
         init(_ forced: NotchForcedState?) {
             switch forced {
@@ -174,6 +175,9 @@ private struct DebugMenu: View {
             case .message(.bridgeBroken): self = .bridgeBroken
             case .message(.loading): self = .loading
             case .missing: self = .partlyWorking
+            case .lists(.loading): self = .listsLoading
+            case .lists(.saved): self = .savedPlaylists
+            case .lists(.empty): self = .emptyLists
             case nil: self = .normal
             }
         }
@@ -186,6 +190,9 @@ private struct DebugMenu: View {
             case .bridgeBroken: .message(.bridgeBroken)
             case .loading: .message(.loading)
             case .partlyWorking: .missing([.like, .seek, .shuffle, .repeatMode])
+            case .listsLoading: .lists(.loading)
+            case .savedPlaylists: .lists(.saved)
+            case .emptyLists: .lists(.empty)
             }
         }
 
@@ -197,6 +204,9 @@ private struct DebugMenu: View {
             case .bridgeBroken: "Player Needs an Update"
             case .loading: "Loading"
             case .partlyWorking: "Partly Working"
+            case .listsLoading: "Lists Loading"
+            case .savedPlaylists: "Saved Playlists"
+            case .emptyLists: "Empty Lists"
             }
         }
     }

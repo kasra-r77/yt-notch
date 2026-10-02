@@ -39,8 +39,12 @@
     guideEntry: 'ytmusic-guide-entry-renderer',
     guideEntryTitle: '.title',
     playlistBrowseIdPrefix: 'VL',
-    // Starting a playlist goes by its address on the site, a full page load.
+    // Liked music's playlist ID. It is pinned first in the list.
+    likedMusicId: 'LM',
+    // Starting a playlist goes by its address on the site, a full page load. The player
+    // page's address keeps the playlist in this parameter while it plays.
     playlistPath: '/watch?list=',
+    playlistParam: 'list',
 
     // The queue. `#contents` holds the playlist; Autoplay suggestions in `#automix-contents`
     // are left out. Songs that also have a video come in pairs, and the counterpart half is
@@ -50,6 +54,9 @@
     queueItemTitle: '.song-title',
     queueItemArtist: '.byline',
     queueItemPlayButton: 'ytmusic-play-button-renderer',
+    // Each item's thumbnail and its length as text ("3:45").
+    queueItemThumbnail: 'img',
+    queueItemDuration: '.duration',
 
     // Shuffle and repeat live in the player page's controls (on /watch, not the home page).
     // Shuffle: `aria-pressed`. Repeat: `aria-pressed` is false when off, in any language;
@@ -148,7 +155,14 @@
       canNext: Boolean(handlers.nexttrack || duration !== null),
       canPrevious: Boolean(handlers.previoustrack || media),
       liked: Boolean(like && like.getAttribute('aria-pressed') === 'true'),
+      playlistId: readPlaylistId(),
     };
+  }
+
+  // The playlist in the address, while one plays.
+  function readPlaylistId() {
+    const id = attempt(() => new URLSearchParams(window.location.search).get(PAGE.playlistParam), null);
+    return id || null;
   }
 
   // Names match PlayerCore's Feature. Each feature is checked on its own, so one broken
@@ -196,9 +210,10 @@
         || attempt(() => data.formattedTitle.runs.map((run) => run.text).join(''), '');
       if (!title) continue;
       seen.add(id);
-      items.push({ id, title, thumbnailURL: null });
+      items.push({ id, title, thumbnailURL: null, isLikedMusic: id === PAGE.likedMusicId });
     }
-    return items;
+    // Liked music first, the rest in sidebar order.
+    return items.filter((item) => item.isLikedMusic).concat(items.filter((item) => !item.isLikedMusic));
   }
 
   // The queue's items in order; their positions are the indexes playQueueItem takes.
@@ -217,7 +232,21 @@
       title: textOf(attempt(() => item.querySelector(PAGE.queueItemTitle), null)),
       artist: textOf(attempt(() => item.querySelector(PAGE.queueItemArtist), null)),
       isCurrent: isCurrentQueueItem(item),
+      artworkURL: readThumbnail(item),
+      duration: parseClock(textOf(attempt(() => item.querySelector(PAGE.queueItemDuration), null))),
     }));
+  }
+
+  // A web address only: the site shows placeholders before its thumbnails load.
+  function readThumbnail(item) {
+    const src = attempt(() => String(item.querySelector(PAGE.queueItemThumbnail).src || ''), '');
+    return /^https?:/.test(src) ? src : null;
+  }
+
+  // "3:45" or "1:02:03" in seconds, or null.
+  function parseClock(text) {
+    if (!/^\d+(:\d{1,2}){1,2}$/.test(text)) return null;
+    return text.split(':').reduce((total, part) => total * 60 + Number(part), 0);
   }
 
   // 'off', 'all', 'one', or null when the button's label is not one we know.

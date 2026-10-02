@@ -14,9 +14,39 @@ struct BridgeLibraryTests {
     @Test func playlistsComeFromTheSidebar() async throws {
         try await page.load()
         let items = try await page.any("playlists") { $0.playlists }
-        #expect(items.map(\.id) == ["LM", "PLfixture-mix", "PLfixture-focus", "SE"])
+        #expect(items.map(\.id) == ["LM", "PLfixture-mix", "PLfixture-focus", "SE"], "Liked music pinned first")
         #expect(items.map(\.title) == ["Liked music", "Fixture Mix", "Focus", "Episodes for later"])
+        #expect(items.map(\.isLikedMusic) == [true, false, false, false])
         #expect(items.allSatisfy { $0.thumbnailURL == nil })
+    }
+
+    @Test func queueItemsHaveTheirLengthAndThumbnail() async throws {
+        try await page.load()
+        let items = try await page.any("queue") { $0.queue }
+        #expect(items.map(\.duration) == [200, 150, 90])
+        #expect(items.map(\.artworkURL?.absoluteString) == [
+            "https://fixture.ytnotch.test/art/a-60.jpg",
+            "https://fixture.ytnotch.test/art/b-60.jpg",
+            nil,
+        ], "a thumbnail that hasn't loaded is left out")
+    }
+
+    @Test func thePlaylistPlayingNowComesFromTheAddress() async throws {
+        try await page.load(path: "/watch?list=PLfixture-focus")
+        let id = try await page.any("state") { event -> String? in
+            if case let .state(snapshot) = event { return snapshot.playlistID ?? "none" }
+            return nil
+        }
+        #expect(id == "PLfixture-focus")
+    }
+
+    @Test func noPlaylistOutsideOne() async throws {
+        try await page.load()
+        let id = try await page.any("state") { event -> String? in
+            if case let .state(snapshot) = event { return snapshot.playlistID ?? "none" }
+            return nil
+        }
+        #expect(id == "none")
     }
 
     @Test func queueLeavesOutCounterpartsAndAutoplay() async throws {

@@ -24,6 +24,7 @@ public final class PlayerStore {
         self.now = now
         if let cached = playlistCache?.load(), !cached.isEmpty {
             state.playlists = cached
+            state.playlistsAreRemembered = true
         }
         engine.start { [weak self] event in
             self?.apply(event)
@@ -107,9 +108,13 @@ public final class PlayerStore {
             set(\.canNext, snapshot.canNext)
             set(\.canPrevious, snapshot.canPrevious)
             set(\.liked, snapshot.liked)
+            set(\.playlistID, snapshot.playlistID)
         case let .playlists(items):
             set(\.playlists, items)
-            if !items.isEmpty { playlistCache?.save(items) }
+            if !items.isEmpty {
+                set(\.playlistsAreRemembered, false)
+                playlistCache?.save(items)
+            }
         case let .queue(items):
             set(\.queue, items)
         case let .modes(shuffle, repeatMode):

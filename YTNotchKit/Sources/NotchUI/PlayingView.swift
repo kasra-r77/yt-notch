@@ -47,13 +47,7 @@ struct PlayingView: View {
                 .disabled(!p.canLike)
                 .help(PlayingPresentation.help(p.likeLabel, enabled: p.canLike))
                 .accessibilityLabel(p.likeLabel)
-                Button(action: actions.open) {
-                    Image(systemName: Tokens.Symbol.open).font(Tokens.Font.icon)
-                }
-                .buttonStyle(NotchControlStyle())
-                .disabled(actions.openFullWindow == nil)
-                .help("Open YouTube Music")
-                .accessibilityLabel("Open YouTube Music")
+                OpenButton(actions: actions)
             }
         }
         .padding(.horizontal, S.expandedPadding)
@@ -122,6 +116,21 @@ struct PlayingView: View {
         .disabled(!enabled)
         .help(PlayingPresentation.help(label, enabled: enabled))
         .accessibilityLabel(label)
+    }
+}
+
+/// Open, in the right ear of every view: shows the full window and closes the notch.
+struct OpenButton: View {
+    let actions: NotchActions
+
+    var body: some View {
+        Button(action: actions.open) {
+            Image(systemName: Tokens.Symbol.open).font(Tokens.Font.icon)
+        }
+        .buttonStyle(NotchControlStyle())
+        .disabled(actions.openFullWindow == nil)
+        .help("Open YouTube Music")
+        .accessibilityLabel("Open YouTube Music")
     }
 }
 

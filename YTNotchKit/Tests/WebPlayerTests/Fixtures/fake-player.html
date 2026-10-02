@@ -115,11 +115,12 @@
     showLike();
   });
 
-  // The sidebar: navigation entries, then playlists, as the site lists them. Each entry
-  // carries its data as a property, like the site's elements.
+  // The sidebar: navigation entries, then playlists. Each entry carries its data as a
+  // property, like the site's elements. Liked music comes second here, so tests see the
+  // bridge pin it first.
   const GUIDE = [
     ['FEmusic_home', 'Home'], ['FEmusic_explore', 'Explore'], ['FEmusic_library_landing', 'Library'],
-    ['VLLM', 'Liked music'], ['VLPLfixture-mix', 'Fixture Mix'], ['VLPLfixture-focus', 'Focus'],
+    ['VLPLfixture-mix', 'Fixture Mix'], ['VLLM', 'Liked music'], ['VLPLfixture-focus', 'Focus'],
     ['VLPLfixture-mix', 'Fixture Mix'], ['VLSE', 'Episodes for later'],
   ];
   if (!options.has('no-sidebar')) {
@@ -135,12 +136,20 @@
     }
   }
 
-  // The queue: one item per track. The second comes as a song/video pair, and one Autoplay
-  // suggestion follows; the bridge must leave out the counterpart and the suggestion.
+  // The queue: one item per track, with its thumbnail and length. The second comes as a
+  // song/video pair, and one Autoplay suggestion follows; the bridge must leave out the
+  // counterpart and the suggestion. The third track's thumbnail hasn't loaded yet.
   const queueItems = [];
+  const clock = (seconds) => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
   function queueItem(track, trackIndex) {
     const item = document.createElement('ytmusic-player-queue-item');
     item.setAttribute('play-button-state', 'default');
+    const thumbnail = document.createElement('img');
+    thumbnail.src = track.id && track.id !== 'c' ? 'https://fixture.ytnotch.test/art/' + track.id + '-60.jpg' : 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    const length = document.createElement('yt-formatted-string');
+    length.className = 'duration';
+    length.textContent = track.duration ? clock(track.duration) : '';
+    item.append(thumbnail, length);
     const title = document.createElement('yt-formatted-string');
     title.className = 'song-title';
     title.textContent = track.title;

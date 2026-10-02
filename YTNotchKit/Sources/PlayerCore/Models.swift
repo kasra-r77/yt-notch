@@ -33,11 +33,27 @@ public struct PlaylistItem: Equatable, Sendable, Identifiable, Codable {
     public var id: String
     public var title: String
     public var thumbnailURL: URL?
+    /// The user's liked songs, which the Playlists view pins first with its own tile.
+    public var isLikedMusic: Bool
 
-    public init(id: String, title: String, thumbnailURL: URL? = nil) {
+    public init(id: String, title: String, thumbnailURL: URL? = nil, isLikedMusic: Bool = false) {
         self.id = id
         self.title = title
         self.thumbnailURL = thumbnailURL
+        self.isLikedMusic = isLikedMusic
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, thumbnailURL, isLikedMusic
+    }
+
+    /// Lists saved before `isLikedMusic` existed still load.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        thumbnailURL = try container.decodeIfPresent(URL.self, forKey: .thumbnailURL)
+        isLikedMusic = try container.decodeIfPresent(Bool.self, forKey: .isLikedMusic) ?? false
     }
 }
 
@@ -47,14 +63,20 @@ public struct QueueItem: Equatable, Sendable, Identifiable {
     public var title: String
     public var artist: String
     public var isCurrent: Bool
+    /// The track's picture, when the page shows one.
+    public var artworkURL: URL?
+    /// In seconds, when the page shows the length.
+    public var duration: TimeInterval?
 
     public var id: Int { index }
 
-    public init(index: Int, title: String, artist: String, isCurrent: Bool) {
+    public init(index: Int, title: String, artist: String, isCurrent: Bool, artworkURL: URL? = nil, duration: TimeInterval? = nil) {
         self.index = index
         self.title = title
         self.artist = artist
         self.isCurrent = isCurrent
+        self.artworkURL = artworkURL
+        self.duration = duration
     }
 }
 
@@ -117,6 +139,8 @@ public struct PlaybackSnapshot: Equatable, Sendable {
     public var canNext: Bool
     public var canPrevious: Bool
     public var liked: Bool
+    /// The library playlist playing now, if the page says; nil for anything else.
+    public var playlistID: String?
 
     public init(
         track: Track?,
@@ -124,7 +148,8 @@ public struct PlaybackSnapshot: Equatable, Sendable {
         isPlaying: Bool = false,
         canNext: Bool = false,
         canPrevious: Bool = false,
-        liked: Bool = false
+        liked: Bool = false,
+        playlistID: String? = nil
     ) {
         self.track = track
         self.position = position
@@ -132,5 +157,6 @@ public struct PlaybackSnapshot: Equatable, Sendable {
         self.canNext = canNext
         self.canPrevious = canPrevious
         self.liked = liked
+        self.playlistID = playlistID
     }
 }

@@ -94,6 +94,33 @@ public enum Tokens {
         public static let messageInset: CGFloat = 40
         public static let buttonHeight: CGFloat = 28
         public static let buttonPadding: CGFloat = 14
+        // The lists (D3): rows 48 tall and 384 wide, inset 8 from the shape.
+        public static let row: CGFloat = 48
+        public static let rowInset: CGFloat = 8
+        public static let rowPadding: CGFloat = 8
+        public static let thumbnail: CGFloat = 32
+        public static let tileGap: CGFloat = 12
+        public static let rowLineGap: CGFloat = 1
+        /// Between the text and what trails it (the bars, the length), and between those two.
+        public static let rowTrailingGap: CGFloat = 8
+        /// From the band to the first row, and below the last.
+        public static let listTop: CGFloat = 12
+        public static let listBottom: CGFloat = 16
+        public static let visibleRows = 5
+        /// The playing marker: three bars, resting at these heights and swinging up to 10.
+        public static let listBarRestHeights: [CGFloat] = [6, 10, 4]
+        public static let listBarMaxHeight: CGFloat = 10
+        /// The saved-list line above the rows, and its icon.
+        public static let savedLine: CGFloat = 20
+        public static let savedIcon: CGFloat = 12
+        public static let savedIconGap: CGFloat = 4
+        /// The clip line once scrolled: a divider and a fade below it; and the bottom fade.
+        public static let divider: CGFloat = 0.5
+        public static let clipFade: CGFloat = 12
+        public static let bottomFade: CGFloat = 16
+        public static let emptyIcon: CGFloat = 24
+        /// Between a loading row's two bars.
+        public static let skeletonRowGap: CGFloat = 6
         /// Type sizes, for the fonts below and for measuring text.
         public static let titleText: CGFloat = 13
         public static let secondaryText: CGFloat = 11
@@ -134,6 +161,8 @@ public enum Tokens {
         /// The title's loading bar; the artist's uses `placeholder`.
         public static let skeletonStrong = SwiftUI.Color.white.opacity(0.1)
         public static let artworkPlaceholderIcon = SwiftUI.Color.white.opacity(0.3)
+        /// The icon over an empty list.
+        public static let emptyIcon = SwiftUI.Color.white.opacity(0.3)
         public static let track = SwiftUI.Color.white.opacity(0.2)
         public static let halo = SwiftUI.Color.white.opacity(0.2)
         public static let scroller = SwiftUI.Color.white.opacity(0.4)
@@ -163,6 +192,8 @@ public enum Tokens {
         public static let playIcon = SwiftUI.Font.system(size: Size.playIcon, weight: .medium)
         public static let artworkPlaceholderIcon = SwiftUI.Font.system(size: Size.artworkPlaceholderIcon, weight: .regular)
         public static let messageIcon = SwiftUI.Font.system(size: Size.messageIcon, weight: .medium)
+        public static let savedIcon = SwiftUI.Font.system(size: Size.savedIcon, weight: .medium)
+        public static let emptyIcon = SwiftUI.Font.system(size: Size.emptyIcon, weight: .regular)
     }
 
     /// SF Symbol names for every control (D5, "Icons").

@@ -9,12 +9,21 @@ public enum NotchMessage: String, CaseIterable, Sendable {
     case loading
 }
 
-/// What a debug menu can force on the notch, over what the player reports (N2.6), so each
-/// state can be looked at without breaking anything.
+/// What a debug menu can force on the notch, over what the player reports (N2.6, N2.7), so
+/// each state can be looked at without breaking anything.
 public enum NotchForcedState: Equatable, Sendable {
     case message(NotchMessage)
     /// The page plays but these parts can't be read.
     case missing(Set<Feature>)
+    /// Both lists show this state, and both tabs show.
+    case lists(ListState)
+
+    public enum ListState: Equatable, Sendable {
+        case loading
+        /// Playlists shows its list as remembered, under the saved-list line.
+        case saved
+        case empty
+    }
 }
 
 /// The one message, and at most one button, for a state (D4's wording).

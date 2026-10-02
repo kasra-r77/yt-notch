@@ -68,7 +68,8 @@ public enum Bridge {
         case "playlists":
             let items = (message["items"] as? [[String: Any]] ?? []).compactMap { item -> PlaylistItem? in
                 guard let id = item["id"] as? String, let title = item["title"] as? String else { return nil }
-                return PlaylistItem(id: id, title: title, thumbnailURL: url(item["thumbnailURL"]))
+                return PlaylistItem(id: id, title: title, thumbnailURL: url(item["thumbnailURL"]),
+                                    isLikedMusic: item["isLikedMusic"] as? Bool ?? false)
             }
             return .playlists(items)
         case "queue":
@@ -78,7 +79,9 @@ public enum Bridge {
                     index: index,
                     title: title,
                     artist: item["artist"] as? String ?? "",
-                    isCurrent: item["isCurrent"] as? Bool ?? false
+                    isCurrent: item["isCurrent"] as? Bool ?? false,
+                    artworkURL: url(item["artworkURL"]),
+                    duration: item["duration"] as? Double
                 )
             }
             return .queue(items)
@@ -110,7 +113,8 @@ public enum Bridge {
             isPlaying: message["isPlaying"] as? Bool ?? false,
             canNext: message["canNext"] as? Bool ?? false,
             canPrevious: message["canPrevious"] as? Bool ?? false,
-            liked: message["liked"] as? Bool ?? false
+            liked: message["liked"] as? Bool ?? false,
+            playlistID: message["playlistId"] as? String
         )
     }
 

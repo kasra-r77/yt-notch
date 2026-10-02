@@ -34,12 +34,14 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
     }
 
     /// Loads the fixture page with options (see fake-player.html) and waits for `ready`.
-    func load(_ options: String...) async throws {
+    /// `path` is the address's path and query, as the site's player page has them.
+    func load(_ options: String..., path: String = "/") async throws {
         guard let url = Bundle.module.url(forResource: "fake-player", withExtension: "html", subdirectory: "Fixtures") else {
             throw HarnessError.missingFixture
         }
         let html = try String(contentsOf: url, encoding: .utf8)
-        let base = URL(string: "https://fixture.ytnotch.test/#" + options.joined(separator: ","))!
+        let base = URL(string: "https://fixture.ytnotch.test" + path + "#" + options.joined(separator: ","))!
+        loadedPath = path
         webView.loadHTMLString(html, baseURL: base)
         try await wait("ready") { $0.contains { $0["type"] as? String == "ready" } }
     }
@@ -109,12 +111,19 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
     /// else (starting a playlist by its address) is recorded and stopped, so tests never
     /// leave the fixture.
     private(set) var blockedNavigations: [URL] = []
+    /// The path and query of the page loaded; any other address is blocked.
+    private var loadedPath = "/"
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let url = navigationAction.request.url else { return .cancel }
-        if url.host == "fixture.ytnotch.test", url.path == "/" || url.path.isEmpty { return .allow }
+        if url.host == "fixture.ytnotch.test", Self.pathAndQuery(url) == loadedPath { return .allow }
         blockedNavigations.append(url)
         return .cancel
+    }
+
+    private static func pathAndQuery(_ url: URL) -> String {
+        let path = url.path.isEmpty ? "/" : url.path
+        return url.query.map { path + "?" + $0 } ?? path
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {

@@ -17,7 +17,8 @@ final class ArtworkLoader {
     private var cache: [URL: Artwork] = [:]
     private var order: [URL] = []
     private var inFlight: [URL: Task<Data?, Never>] = [:]
-    private let limit = 24
+    /// Enough for a long Up next list's thumbnails as well as the track's artwork.
+    private let limit = 64
     private let session: URLSession
     private let log = Logger(subsystem: "io.github.kasra-r77.ytnotch", category: "NotchUI")
 

@@ -19,11 +19,11 @@ struct BridgeContractTests {
         let body: [String: Any] = [
             "type": "state", "trackId": "m1", "title": "T", "artist": "A", "album": NSNull(),
             "artworkURL": "https://x.test/a.jpg", "duration": 180.5, "position": 12.25,
-            "isPlaying": true, "canNext": true, "canPrevious": false, "liked": true,
+            "isPlaying": true, "canNext": true, "canPrevious": false, "liked": true, "playlistId": "PL1",
         ]
         let expected = PlaybackSnapshot(
             track: Track(id: "m1", title: "T", artist: "A", album: nil, artworkURL: URL(string: "https://x.test/a.jpg"), duration: 180.5),
-            position: 12.25, isPlaying: true, canNext: true, canPrevious: false, liked: true
+            position: 12.25, isPlaying: true, canNext: true, canPrevious: false, liked: true, playlistID: "PL1"
         )
         #expect(Bridge.event(from: body) == .state(expected))
     }
@@ -44,23 +44,23 @@ struct BridgeContractTests {
 
     @Test func playlists() {
         let body: [String: Any] = ["type": "playlists", "items": [
-            ["id": "LM", "title": "Liked music", "thumbnailURL": NSNull()],
+            ["id": "LM", "title": "Liked music", "thumbnailURL": NSNull(), "isLikedMusic": true],
             ["id": "PL1", "title": "Mix", "thumbnailURL": "https://x.test/t.jpg"],
             ["title": "no id"],
         ]]
         #expect(Bridge.event(from: body) == .playlists([
-            PlaylistItem(id: "LM", title: "Liked music"),
+            PlaylistItem(id: "LM", title: "Liked music", isLikedMusic: true),
             PlaylistItem(id: "PL1", title: "Mix", thumbnailURL: URL(string: "https://x.test/t.jpg")),
         ]))
     }
 
     @Test func queue() {
         let body: [String: Any] = ["type": "queue", "items": [
-            ["index": 0, "title": "A", "artist": "X", "isCurrent": true],
-            ["index": 1, "title": "B", "artist": "Y", "isCurrent": false],
+            ["index": 0, "title": "A", "artist": "X", "isCurrent": true, "artworkURL": "https://x.test/a.jpg", "duration": 225.0],
+            ["index": 1, "title": "B", "artist": "Y", "isCurrent": false, "artworkURL": NSNull(), "duration": NSNull()],
         ]]
         #expect(Bridge.event(from: body) == .queue([
-            QueueItem(index: 0, title: "A", artist: "X", isCurrent: true),
+            QueueItem(index: 0, title: "A", artist: "X", isCurrent: true, artworkURL: URL(string: "https://x.test/a.jpg"), duration: 225),
             QueueItem(index: 1, title: "B", artist: "Y", isCurrent: false),
         ]))
     }

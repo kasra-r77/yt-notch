@@ -162,17 +162,24 @@ struct PeekLine: View {
 
 /// Where the expanded views go: Playing (N2.5), the messages (N2.6) and the lists (N2.7).
 /// Laid out at the final size and revealed by the growing shape; it takes clicks only
-/// while shown.
+/// while shown. Switching views fades the old one out and the new one in.
 struct ExpandedContent: View {
     let model: NotchModel
 
     var body: some View {
         Group {
-            if model.expandedContent == .view(.playing), let store = model.actions.store {
+            switch (model.expandedContent, model.actions.store) {
+            case let (.view(.playing)?, store?):
                 PlayingView(state: store.state, model: model, actions: model.actions, extra: model.expandedExtra)
-            } else if model.expandedContent == .message, let message = model.message {
-                MessageView(presentation: MessagePresentation(message), actions: model.actions, extra: model.expandedExtra)
-            } else {
+                    .transition(model.viewTransition)
+            case let (.view(view)?, store?) where view.isList:
+                ListView(state: store.state, view: view, model: model, actions: model.actions, extra: model.expandedExtra)
+                    .id(view)
+                    .transition(model.viewTransition)
+            case (.message?, _) where model.message != nil:
+                MessageView(presentation: MessagePresentation(model.message ?? .loading), actions: model.actions, extra: model.expandedExtra)
+                    .transition(model.viewTransition)
+            default:
                 Color.clear.frame(width: model.outline.width, height: model.outline.height)
             }
         }
