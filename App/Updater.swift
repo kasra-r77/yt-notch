@@ -4,7 +4,7 @@ import Observation
 import Sparkle
 
 /// Sparkle starts only when the app carries the public update key (`SUPublicEDKey`), so
-/// nothing half-works before the owner has made the keys (README, "Updates").
+/// nothing half-works before the owner has made the keys (CONTRIBUTING, "Releases and updates").
 @MainActor
 @Observable
 final class Updater: NSObject, SPUUpdaterDelegate {

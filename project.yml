@@ -61,7 +61,7 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         LSUIElement: true
         NSHumanReadableCopyright: Copyright © 2026 Kasra Rismanchi. Apache License 2.0.
-        # SUPublicEDKey stays empty until the owner makes the update keys (README, "Updates");
+        # SUPublicEDKey stays empty until the owner makes the update keys (CONTRIBUTING, "Releases and updates");
         # while it is empty the app doesn't start the updater.
         SUFeedURL: https://github.com/kasra-r77/yt-notch/releases/latest/download/appcast.xml
         SUEnableAutomaticChecks: true

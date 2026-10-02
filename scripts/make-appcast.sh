@@ -14,7 +14,7 @@ tools="build/release/SourcePackages/artifacts/sparkle/Sparkle/bin"
 
 key=$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' "$app/Contents/Info.plist" 2>/dev/null || true)
 if [[ -z "$key" ]]; then
-  echo "error: the app has no SUPublicEDKey; add the public update key to project.yml (README, \"Updates\")" >&2
+  echo "error: the app has no SUPublicEDKey; add the public update key to project.yml (CONTRIBUTING, \"Releases and updates\")" >&2
   exit 1
 fi
 
