@@ -14,12 +14,25 @@ YT Notch plays the real YouTube Music website in a window of its own, signed in 
 
 1. Download the latest `.dmg` from [Releases](https://github.com/kasra-r77/yt-notch/releases).
 2. Open it and drag **YT Notch** to **Applications**.
-3. Open YT Notch. The first time, macOS blocks it because the app isn't notarised by Apple:
-   1. Close the message.
-   2. Go to **System Settings › Privacy & Security**, scroll down, and click **Open Anyway** next to "YT Notch was blocked".
-   3. Confirm, then click **Open**.
+3. Open YT Notch from Applications.
 
-   You only do this once. Or, in Terminal: `xattr -dr com.apple.quarantine "/Applications/YT Notch.app"`.
+### "Apple could not verify YT Notch…"
+
+The first time you open it, macOS stops YT Notch with this message. Apple only vouches for apps from developers in its paid program, and YT Notch is a free app outside it. The code is all here to read or build yourself. To open it:
+
+1. Click **Done** in the message. Don't click Move to Trash.
+2. Open **System Settings › Privacy & Security** and scroll down to **Security**.
+3. Next to "YT Notch" was blocked to protect your Mac, click **Open Anyway**:
+
+   ![The Open Anyway button in Privacy & Security](docs/images/open-anyway.png)
+
+4. Confirm with your password or Touch ID, then click **Open Anyway** once more.
+
+You only do this once; updates open without asking. If you prefer Terminal, this does the same:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/YT Notch.app"
+```
 
 Requires macOS 14 or later, on Apple silicon or Intel.
 
