@@ -94,7 +94,6 @@ swift test --package-path YTNotchKit
 | `docs/design/` | Approved design specs |
 | `docs/spike-report.md` | What phase 0 learned about the site |
 | `docs/decisions.md` | Choices the plan did not make |
-| `spike/` | The phase 0 spike (throwaway) |
 
 Contributors and coding agents: read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) first.
 
