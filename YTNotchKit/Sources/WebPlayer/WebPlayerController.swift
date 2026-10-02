@@ -72,6 +72,8 @@ public final class WebPlayerController: NSObject, PlayerEngine {
     private(set) var recoveryStage = RecoveryStage.none
     private(set) var loadAttempts = 0
     private(set) var stalls = 0
+    /// How many times a page of the site has said its bridge is ready: once per load.
+    private(set) var readyReports = 0
     private var isOffline = false
     private var retryAttempt = 0
     private var retryTask: Task<Void, Never>?
@@ -248,6 +250,7 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         switch event {
         case let .ready(_, isSignedIn):
             log.notice("the bridge is ready")
+            readyReports += 1
             lastHeardAt = now
             signedIn(isSignedIn)
             pageIsBack()

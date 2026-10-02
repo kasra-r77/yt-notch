@@ -105,7 +105,9 @@ struct WebPlayerRecoveryTests {
 
         controller.webViewWebContentProcessDidTerminate(controller.webView)
         #expect(controller.loadAttempts == 2)
-        try await eventually("paused after the reload") { controller.loadAttempts == 2 && !store.state.isPlaying }
+        // The store still has the first page's state, so wait for the new page itself.
+        try await eventually("the reloaded page is ready") { controller.readyReports == 2 }
+        try await eventually("paused after the reload") { !store.state.isPlaying }
         try await Task.sleep(for: .seconds(1.5))
         let paused = try await controller.webView.callAsyncJavaScript("return window.fixture.status().paused", contentWorld: .page) as? Bool
         #expect(paused == true)
@@ -119,8 +121,9 @@ struct WebPlayerRecoveryTests {
         try await eventually("ready") { store.state.health.status == .ok && store.state.track != nil }
 
         controller.webViewWebContentProcessDidTerminate(controller.webView)
-        try await eventually("ready again") { controller.loadAttempts == 2 && store.state.track != nil }
-        try await Task.sleep(for: .milliseconds(300))
+        // Wait for the reloaded page to be ready, not for a while: the store still holds the
+        // first page's track, and a play sent before the new page's bridge is up is lost.
+        try await eventually("the reloaded page is ready") { controller.readyReports == 2 && store.state.track != nil }
         store.play()
         try await eventually("playing") { store.state.isPlaying }
         try await Task.sleep(for: .seconds(1.5))
