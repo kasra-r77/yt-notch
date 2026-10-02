@@ -31,4 +31,4 @@ Most fixes for a change on YouTube Music's side belong in the `PAGE` table at th
 
 ## Licence
 
-By contributing you agree that your work is released under the [MIT License](LICENSE).
+By contributing you agree that your work is released under the [Apache License 2.0](LICENSE).

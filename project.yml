@@ -35,6 +35,12 @@ targets:
     platform: macOS
     sources:
       - App
+      - path: LICENSE
+        buildPhase: resources
+      - path: NOTICE
+        buildPhase: resources
+      - path: THIRD_PARTY_NOTICES.txt
+        buildPhase: resources
     dependencies:
       - package: YTNotchKit
         product: PlayerCore
@@ -55,7 +61,7 @@ targets:
         LSApplicationCategoryType: public.app-category.music
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         LSUIElement: true
-        NSHumanReadableCopyright: Copyright © 2026 Kasra Rismanchi. MIT License.
+        NSHumanReadableCopyright: Copyright © 2026 Kasra Rismanchi. Apache License 2.0.
         # Sparkle: the feed every release publishes, a daily check, and the public half of
         # the update signing key. Empty until the owner makes the keys (README, "Updates");
         # until then the app doesn't start the updater.

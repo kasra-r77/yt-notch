@@ -23,6 +23,9 @@ if [[ -n "${EXPECTED_VERSION:-}" && "$EXPECTED_VERSION" != "$version" ]]; then
   exit 1
 fi
 codesign --verify --deep --strict "$app"
+for notice in LICENSE NOTICE THIRD_PARTY_NOTICES.txt; do
+  [[ -f "$app/Contents/Resources/$notice" ]] || { echo "error: the app is missing $notice" >&2; exit 1; }
+done
 lipo -archs "$app/Contents/MacOS/YT Notch"
 
 mkdir -p dist

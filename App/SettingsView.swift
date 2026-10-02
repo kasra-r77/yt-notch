@@ -171,6 +171,9 @@ struct AboutPane: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+            Text(Self.copyright)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             HStack {
                 Button("Source Code") { NSWorkspace.shared.open(Self.repository) }
                 Button("Report an Issue") { NSWorkspace.shared.open(Self.repository.appendingPathComponent("issues/new")) }
@@ -183,4 +186,5 @@ struct AboutPane: View {
 
     static var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?" }
     static var build: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?" }
+    static var copyright: String { Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String ?? "" }
 }

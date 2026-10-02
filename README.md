@@ -124,4 +124,6 @@ Contributors and coding agents: read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGE
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE). You may use, change and share the code, including in your own apps. If you reuse it, keep the [LICENSE](LICENSE) and [NOTICE](NOTICE) files with it, and say which files you changed. NOTICE credits YT Notch.
+
+The app includes [Sparkle](https://sparkle-project.org) under the MIT License; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
