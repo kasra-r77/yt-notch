@@ -44,6 +44,7 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: YT Notch
+        CFBundleIconName: AppIcon
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.music
@@ -54,6 +55,7 @@ targets:
       base:
         PRODUCT_NAME: YT Notch
         PRODUCT_BUNDLE_IDENTIFIER: io.github.kasra-r77.ytnotch
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
 
 schemes:
