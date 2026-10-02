@@ -51,7 +51,7 @@ swift test --package-path YTNotchKit
 
 - **One ticket = one branch = one pull request.** Name the branch `yt-<number>-<short-name>` and start the PR title with the ticket key.
 - The PR description lists the ticket's "done when" points and which ones it met.
-- CI must pass before merging (once F1.2 lands).
+- CI (`.github/workflows/ci.yml`, job "Build and test") must pass before merging. GitHub does not enforce this until the repo goes public (YT-39), so check it yourself before merging.
 - Build tickets labelled `needs-design` wait for their design ticket's approval. The approved values are in the ticket's "Design spec" section and in `docs/design/`.
 - Gate tickets (G0 to G3) are hands-on reviews by the owner.
 

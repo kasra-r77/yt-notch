@@ -1,0 +1,51 @@
+name: CI
+
+# Builds the app and runs every test on each pull request and on main.
+# The job name "Build and test" is the required status check for merging.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test
+    # macos-15 ships Xcode 16, the oldest Xcode the README supports.
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Show the toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Run the package tests
+        run: swift test --package-path YTNotchKit
+
+      - name: Generate the Xcode project from project.yml
+        run: |
+          if [ -e YTNotch.xcodeproj ]; then
+            echo "::error::YTNotch.xcodeproj is checked in. It is generated from project.yml and must not be committed."
+            exit 1
+          fi
+          xcodegen generate
+
+      - name: Build the app
+        run: xcodebuild -scheme YTNotch -configuration Debug -derivedDataPath build/DerivedData build
