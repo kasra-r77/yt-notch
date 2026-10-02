@@ -22,7 +22,7 @@ The Xcode project is generated from `project.yml` and is not committed. The app 
 
 ### Running
 
-The app plays YouTube Music. The first launch opens its window on the site's sign-in; after that, **Show Web Player** in its menu brings the window back. The menu has every player control, for the [live check](docs/live-check.md) against the site.
+The app plays YouTube Music. The first launch opens its window on the site's sign-in; after that, **Open YT Notch Window** in its menu brings the window back. Playback is in the notch; the [live check](docs/live-check.md) runs it against the site.
 
 For development and demos it can run on canned tracks instead, with no account or network:
 

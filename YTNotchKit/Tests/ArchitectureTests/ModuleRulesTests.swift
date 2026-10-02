@@ -64,6 +64,21 @@ struct ModuleRulesTests {
         }
     }
 
+    /// The app target too: its only network traffic will be the update check (R5.2), which
+    /// the updater framework makes, not code here (I4.3).
+    @Test func theAppTargetMakesNoNetworkRequestsOfItsOwn() throws {
+        let app = Self.sourcesFolder.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("App")
+        let files = (FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil)?.allObjects as? [URL] ?? [])
+            .filter { $0.pathExtension == "swift" }
+        #expect(!files.isEmpty, "No Swift files found in App")
+        for file in files {
+            let text = try String(contentsOf: file, encoding: .utf8)
+            for name in ["URLSession", "NSURLConnection", "CFNetwork", "Data(contentsOf"] {
+                #expect(!text.contains(name), "\(file.lastPathComponent) uses \(name)")
+            }
+        }
+    }
+
     @Test(arguments: ["PlayerCore", "NotchUI", "SystemMedia"])
     func onlyWebPlayerImportsWebKit(module: String) throws {
         #expect(!(try Self.imports(of: module).contains("WebKit")), "\(module) must not import WebKit")

@@ -118,6 +118,15 @@ public struct Health: Equatable, Sendable {
         case offline
         /// Recovery gave up. No commands are sent until the page reports ready again.
         case bridgeBroken
+
+        /// Signed out, offline or broken: something only the user can sort out, so the menu
+        /// bar icon shows its dot and the menu a line saying what (design spec D7).
+        public var needsAttention: Bool {
+            switch self {
+            case .signedOut, .offline, .bridgeBroken: true
+            case .starting, .ok: false
+            }
+        }
     }
 
     public var status: Status

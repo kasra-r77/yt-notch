@@ -13,37 +13,50 @@ import WebPlayer
 @main
 struct YTNotchApp: App {
     @State private var store: PlayerStore
-    private let webPlayer: WebPlayerController?
-    /// A notch on every display the "Show Notch On" setting chooses.
+    /// A notch on every display the "Show the notch on" setting chooses.
     private let notches: NotchDisplayManager
+    /// Shows the full window, on the site's sign-in with `true`. Nil on FakeEngine.
+    private let openWindow: (@MainActor (Bool) -> Void)?
+    private let retry: @MainActor () -> Void
+    private let engineName: String
 
     init() {
         let store: PlayerStore
         let notches: NotchDisplayManager
         if UserDefaults.standard.string(forKey: "engine") == "fake" {
             let engine = FakeEngine(runsClock: true)
-            webPlayer = nil
             store = PlayerStore(engine: engine)
             notches = NotchDisplayManager(store: store)
-            notches.retry = { engine.simulateReload() }
+            openWindow = nil
+            retry = { engine.simulateReload() }
+            engineName = "FakeEngine"
         } else {
             let player = WebPlayerController()
-            webPlayer = player
             store = PlayerStore(engine: player, playlistCache: UserDefaultsPlaylistCache())
             notches = NotchDisplayManager(store: store)
+            openWindow = { player.showWindow(signIn: $0) }
+            retry = { player.retry() }
+            engineName = "web player"
             // Open, and Sign In while signed out, which goes to the site's sign-in.
             notches.openFullWindow = { player.showWindow(signIn: store.state.health.status == .signedOut) }
-            notches.retry = { player.retry() }
             // Once the app has finished launching: the first launch opens on sign-in.
             Task { @MainActor in player.openOnFirstLaunch() }
         }
+        notches.retry = retry
         _store = State(initialValue: store)
         self.notches = notches
     }
 
     var body: some Scene {
-        MenuBarExtra("YT Notch", systemImage: "music.note") {
-            PlayerMenu(store: store, webPlayer: webPlayer, notches: notches)
+        MenuBarExtra {
+            AppMenu(store: store, notches: notches, openWindow: openWindow, retry: retry, engineName: engineName)
+        } label: {
+            // D6's template icon, with its dot while something needs the user.
+            Image(store.state.health.status.needsAttention ? "MenuBarIconAttention" : "MenuBarIcon")
+                .accessibilityLabel("YT Notch")
+        }
+        Settings {
+            SettingsView(notches: notches)
         }
     }
 }
