@@ -4,12 +4,11 @@ import OSLog
 import PlayerCore
 import SwiftUI
 
-/// The menu bar menu (design spec D7): one line on top while something needs the user, then
-/// housekeeping. Playback lives in the notch.
+/// The menu bar menu (design spec D7). Playback controls live in the notch, not here.
 struct AppMenu: View {
     let store: PlayerStore
     let notches: NotchDisplayManager
-    /// Shows the full window; with `true`, on the site's sign-in. Nil without the web player.
+    /// Nil without the web player.
     let openWindow: (@MainActor (_ signIn: Bool) -> Void)?
     let retry: (@MainActor () -> Void)?
     let engineName: String
@@ -77,7 +76,6 @@ struct AppMenu: View {
         }
     }
 
-    /// Puts the report on the clipboard; the item reads "Copied" for 1.5 s.
     private func copyDiagnostics() {
         let versions = Diagnostics.Versions(
             app: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
@@ -98,8 +96,7 @@ struct AppMenu: View {
     }
 }
 
-/// The app's own recent log lines, from this process only. They hold states, counts and
-/// errors, never anything from the user's account (AGENTS.md, logging).
+/// This process's log lines. Safe to share: the app never logs anything from the user's account.
 enum RecentLog {
     static let subsystem = "io.github.kasra-r77.ytnotch"
 
@@ -120,9 +117,7 @@ enum RecentLog {
 }
 
 #if DEBUG
-/// Forces each notch state without breaking anything: the messages and a page that only
-/// partly works (N2.6), and the lists' loading, saved and empty states (N2.7). Normal shows
-/// what the player really reports. Debug builds only.
+/// Forces how the notch looks without touching the player; Normal shows what it really reports.
 private struct DebugMenu: View {
     let notches: NotchDisplayManager
 

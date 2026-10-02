@@ -1,15 +1,12 @@
 import Foundation
 
-/// The plain-text report Copy Diagnostics puts on the clipboard, for a bug report (design
-/// spec D7): the versions, the player's health and the app's recent log lines. Nothing from
-/// the user's account or listening goes in: no titles, artists, playlists, IDs or names, only
-/// states and counts. The log holds none of those either (AGENTS.md, logging).
+/// The Copy Diagnostics report (design spec D7). It must hold nothing from the user's account
+/// or listening: no titles, artists, playlists, IDs or names, only states and counts.
 public enum Diagnostics {
     public struct Versions: Equatable, Sendable {
         public var app: String
         public var build: String
         public var macOS: String
-        /// "web player" or "FakeEngine".
         public var engine: String
 
         public init(app: String, build: String, macOS: String, engine: String) {
@@ -20,7 +17,6 @@ public enum Diagnostics {
         }
     }
 
-    /// How many log lines the report keeps, the newest.
     public static let logLimit = 50
 
     @MainActor

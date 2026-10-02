@@ -1,12 +1,7 @@
 name: Release
 
-# Builds the disk image (scripts/make-dmg.sh) and, for a version tag such as v0.1.0, attaches
-# it to a GitHub release. The app is signed ad hoc and not notarised: there is no Developer ID
-# yet (see docs/decisions.md). Pull requests that change the release itself build the image
-# too, without releasing it, so a broken release is caught before a tag.
-#
-# Once the update key exists (the SPARKLE_PRIVATE_KEY secret, README "Updates"), a tag also
-# gets a signed update feed, appcast.xml, on its release; the app reads the latest one.
+# Pull requests that change the release build the image too, without releasing it, so a
+# broken release is caught before a tag. The app reads appcast.xml from the latest release.
 
 on:
   push:

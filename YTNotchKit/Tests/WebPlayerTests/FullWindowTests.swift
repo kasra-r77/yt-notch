@@ -39,7 +39,6 @@ final class FullWindowTests {
         try await controller.webView.callAsyncJavaScript(source, contentWorld: .page)
     }
 
-    /// Waits until the fixture counts this many clicks on its sign-in link.
     func waitForSignInClicks(_ count: Int, in controller: WebPlayerController) async throws {
         let deadline = Date().addingTimeInterval(5)
         while try await js(controller, "return window.fixture.signInClicks") as? Int != count {

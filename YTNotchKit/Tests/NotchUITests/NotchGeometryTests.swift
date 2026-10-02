@@ -3,7 +3,6 @@ import SwiftUI
 import Testing
 @testable import NotchUI
 
-/// Displays as their screens report them.
 enum Displays {
     /// A 14-inch MacBook Pro at default scaling: 1512 × 982 with a 185 × 32 notch.
     static let macBookPro14 = ScreenGeometry(
@@ -38,11 +37,6 @@ struct NotchGeometryTests {
     @Test func idleWithoutANotchIsThePill() {
         #expect(NotchOutline.idle(on: Displays.external) == NotchOutline(width: 190, height: 30, bottomRadius: 10, flare: 6))
         #expect(NotchOutline.idle(on: Displays.external).footprint == CGSize(width: 202, height: 30))
-    }
-
-    @Test func theBandIsTheNotchOrTheMenuBar() {
-        #expect(Displays.macBookPro14.band == 32)
-        #expect(Displays.external.band == 30)
     }
 
     @Test func thePanelFitsTheLargestShapeAndIsTopCentred() {

@@ -64,7 +64,7 @@ struct ModuleRulesTests {
         }
     }
 
-    /// The app target too: its only network traffic will be the update check (R5.2), which
+    /// The app target too: its only network traffic is the update check (R5.2), which
     /// the updater framework makes, not code here (I4.3).
     @Test func theAppTargetMakesNoNetworkRequestsOfItsOwn() throws {
         let app = Self.sourcesFolder.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("App")

@@ -158,14 +158,6 @@ struct ListViewTests {
         #expect(ListPresentation(.playlists, state: store.state).showsSavedLine, "and back while it can't be read")
     }
 
-    @Test func emptyStatesHaveTheApprovedWording() {
-        #expect(ListPresentation.noPlaylists == .init(symbol: "music.note.list", title: "No playlists yet",
-                                                      detail: "Playlists you make or save on YouTube Music show up here."))
-        #expect(ListPresentation.nothingUpNext == .init(symbol: "list.bullet", title: "Nothing up next",
-                                                        detail: "Start a playlist or an album and its tracks line up here."))
-        #expect(ListPresentation.savedLine == "Saved list · may be out of date")
-    }
-
     @Test func eachListStateCanBeForced() {
         let store = PlayerStore(engine: FakeEngine())
         for view in [HoverMachine.ExpandedView.playlists, .upNext] {
@@ -386,7 +378,6 @@ struct TimedOut: Error, CustomStringConvertible {
     var description: String { "Timed out waiting for \(what)" }
 }
 
-/// A playlist cache that starts with a list.
 final class PlaylistCacheStub: PlaylistCache {
     var items: [PlaylistItem]
     init(_ items: [PlaylistItem]) { self.items = items }

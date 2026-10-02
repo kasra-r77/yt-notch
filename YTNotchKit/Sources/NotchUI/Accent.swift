@@ -1,9 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// The accent colour from the artwork (design spec D5, "Accent"): its dominant colour, with
-/// its OKLCH lightness raised until it has 3:1 contrast on black; white when the artwork is
-/// near grey or missing. Used on the progress fill and the playing bars only.
+/// The accent colour from the artwork (design spec D5, "Accent").
 struct AccentColor: Equatable, Sendable {
     /// sRGB components, 0 to 1.
     var red: Double
@@ -22,13 +20,12 @@ struct AccentColor: Equatable, Sendable {
         self.init(red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255, blue: Double(hex & 0xFF) / 255)
     }
 
-    /// For artwork, or white when there is none.
     static func from(_ image: CGImage?) -> AccentColor {
         guard let image, let dominant = Self.dominant(in: image) else { return .white }
         return dominant.lifted()
     }
 
-    /// The contrast ratio of this colour on black (WCAG).
+    /// WCAG contrast ratio on black.
     var contrastOnBlack: Double {
         func linear(_ c: Double) -> Double { c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
         let luminance = 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
@@ -71,7 +68,6 @@ struct AccentColor: Equatable, Sendable {
         }
         guard drawn else { return nil }
 
-        // Weight each colourful pixel by its chroma, in twelve hue bins.
         let bins = 12
         var weights = [Double](repeating: 0, count: bins)
         var sums = [(l: Double, a: Double, b: Double)](repeating: (0, 0, 0), count: bins)
@@ -127,7 +123,6 @@ struct OKLab: Equatable, Sendable {
         b = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
     }
 
-    /// Back to sRGB, clamped into gamut.
     var srgb: AccentColor {
         let l = pow(lightness + 0.3963377774 * a + 0.2158037573 * b, 3)
         let m = pow(lightness - 0.1055613458 * a - 0.0638541728 * b, 3)

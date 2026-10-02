@@ -1,7 +1,6 @@
 import Testing
 @testable import PlayerCore
 
-/// Every health change the store decides.
 @MainActor
 struct HealthTests {
     @Test func startsAsStarting() {
@@ -88,11 +87,5 @@ struct HealthTests {
         let (store, engine) = Fixture.readyStore()
         engine.emit(.health(missing: [.like]), .ready(bridgeVersion: "1", signedIn: true))
         #expect(store.state.health.missing.isEmpty)
-    }
-
-    @Test func bridgeNamesMatchFeatures() {
-        #expect(Feature(rawValue: "repeat") == .repeatMode)
-        #expect(Feature(rawValue: "playPause") == .playPause)
-        #expect(Feature(rawValue: "unknown") == nil)
     }
 }

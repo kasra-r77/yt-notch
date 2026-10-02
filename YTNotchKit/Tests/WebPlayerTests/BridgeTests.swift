@@ -3,7 +3,6 @@ import PlayerCore
 import Testing
 @testable import WebPlayer
 
-/// bridge.js against the fixture page: every message and every command, with no Google.
 @MainActor
 @Suite(.serialized)
 struct BridgeTests {

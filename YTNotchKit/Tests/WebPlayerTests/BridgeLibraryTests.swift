@@ -9,8 +9,6 @@ import Testing
 struct BridgeLibraryTests {
     let page = BridgeHarness()
 
-    // MARK: Messages
-
     @Test func playlistsComeFromTheSidebar() async throws {
         try await page.load()
         let items = try await page.any("playlists") { $0.playlists }
@@ -86,8 +84,6 @@ struct BridgeLibraryTests {
         #expect(modes.repeatMode == .off)
     }
 
-    // MARK: Commands
-
     @Test func playPlaylistGoesToItsAddress() async throws {
         try await page.load()
         #expect(try await page.send(.playPlaylist(id: "PLfixture-mix"))["ok"] as? Bool == true)
@@ -131,8 +127,6 @@ struct BridgeLibraryTests {
             #expect(try await page.js("return window.fixture.status().repeat") as? String == mode.rawValue)
         }
     }
-
-    // MARK: Broken pieces
 
     @Test(arguments: [("no-sidebar", Feature.playlists), ("no-queue", .queue), ("no-shuffle", .shuffle), ("no-repeat", .repeatMode)])
     func brokenSelectorHidesOnlyItsFeature(option: String, feature: Feature) async throws {

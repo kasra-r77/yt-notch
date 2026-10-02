@@ -6,12 +6,10 @@ import PlayerCore
 struct ListPresentation: Equatable {
     enum Content: Equatable {
         case rows([ListRow])
-        /// Five still placeholder rows, while a list is first read and nothing is saved.
         case loading
         case empty(EmptyList)
     }
 
-    /// The centred icon and two lines a list shows when it has nothing in it.
     struct EmptyList: Equatable {
         var symbol: String
         var title: String
@@ -20,9 +18,7 @@ struct ListPresentation: Equatable {
 
     var view: HoverMachine.ExpandedView
     var content: Content
-    /// "Saved list · may be out of date" above the rows.
     var showsSavedLine: Bool
-    /// What plays now: the list opens scrolled so this row is at the top.
     var currentRowID: ListRow.ID?
     var isPlaying: Bool
     var showsPlaylistsTab: Bool
@@ -87,9 +83,7 @@ struct ListPresentation: Equatable {
         detail: "Start a playlist or an album and its tracks line up here."
     )
 
-    /// Which tabs show besides Playing, which always does. Playlists shows while there is a
-    /// list, saved or read; Up next while the queue can be read and has something in it. The
-    /// open view keeps its tab when its data goes, and shows its empty state instead.
+    /// The open view keeps its tab when its data goes, and shows its empty state instead.
     @MainActor
     static func tabs(_ state: PlayerState, forced: NotchForcedState?, selected: HoverMachine.ExpandedView) -> (playlists: Bool, upNext: Bool) {
         if case .lists = forced { return (true, true) }
@@ -100,12 +94,10 @@ struct ListPresentation: Equatable {
     }
 }
 
-/// One row of a list: a playlist, or a track in the queue.
 struct ListRow: Equatable, Identifiable {
     enum Tile: Equatable {
-        /// An icon on white 8%: playlists, which the site gives no pictures.
+        /// For playlists, which the site gives no pictures.
         case symbol(String)
-        /// The track's artwork, or the placeholder until it loads.
         case artwork(URL?)
     }
 
@@ -116,21 +108,17 @@ struct ListRow: Equatable, Identifiable {
 
     var id: String
     var title: String
-    /// The artist, under the title in Up next.
     var subtitle: String?
-    /// The track's length in Up next, when the page shows it.
     var length: String?
     var tile: Tile
     var isCurrent: Bool
     var action: Action
 
-    /// The address of the row's artwork, for an artwork tile.
     var artworkURL: URL? {
         if case let .artwork(url) = tile { return url }
         return nil
     }
 
-    /// The help tag: everything the row cuts short, in full.
     var help: String {
         [title, subtitle ?? ""].filter { !$0.isEmpty }.joined(separator: " — ")
     }

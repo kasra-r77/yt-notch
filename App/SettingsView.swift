@@ -4,8 +4,7 @@ import OSLog
 import ServiceManagement
 import SwiftUI
 
-/// The Settings window (design spec D7): a standard macOS settings window, 520 wide, whose
-/// changes apply at once. The Updates pane shows once the update check is set up (R5.2).
+/// Design spec D7: 520 wide, and changes apply at once.
 struct SettingsView: View {
     let notches: NotchDisplayManager
     let updater: Updater
@@ -25,7 +24,6 @@ struct SettingsView: View {
     }
 }
 
-/// Where the notch shows, and opening at login.
 private struct GeneralPane: View {
     let notches: NotchDisplayManager
     @State private var opensAtLogin = LoginItem.isEnabled
@@ -99,8 +97,6 @@ private struct GeneralPane: View {
     }
 }
 
-/// Opening at login, through the system's login items, so it also shows in System Settings
-/// › General › Login Items.
 enum LoginItem {
     private static let log = Logger(subsystem: "io.github.kasra-r77.ytnotch", category: "App")
 
@@ -117,7 +113,6 @@ enum LoginItem {
     }
 }
 
-/// Checking for updates: automatically once a day, or now.
 private struct UpdatesPane: View {
     let updater: Updater
     @State private var checksAutomatically = true
@@ -152,7 +147,6 @@ private struct UpdatesPane: View {
     }
 }
 
-/// The app, its version, what it is, and that it is unofficial.
 struct AboutPane: View {
     static let repository = URL(string: "https://github.com/kasra-r77/yt-notch")!
 

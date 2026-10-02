@@ -1,8 +1,7 @@
 import AppKit
 
-/// What the notch needs to know about one display, read from its `NSScreen` and never
-/// hard-coded. In screen coordinates (points, origin at the bottom left), like
-/// `NSScreen.frame`.
+/// Read from `NSScreen`, never hard-coded. In screen coordinates (points, origin at the
+/// bottom left), like `NSScreen.frame`.
 public struct ScreenGeometry: Equatable, Sendable {
     public var displayID: CGDirectDisplayID
     /// Stays the same for a display across reconnects and restarts, unlike `displayID`:
@@ -11,9 +10,7 @@ public struct ScreenGeometry: Equatable, Sendable {
     public var name: String
     public var isBuiltIn: Bool
     public var frame: CGRect
-    /// The hardware notch, or nil on a display without one.
     public var notch: CGRect?
-    /// The menu bar's height on this display.
     public var menuBarHeight: CGFloat
 
     public init(
@@ -29,8 +26,6 @@ public struct ScreenGeometry: Equatable, Sendable {
         self.menuBarHeight = menuBarHeight
     }
 
-    /// Reads the notch from the areas either side of the camera housing and the safe area at
-    /// the top (design spec, "Idle on the built-in display").
     @MainActor
     public init(_ screen: NSScreen) {
         frame = screen.frame
@@ -61,11 +56,9 @@ public struct ScreenGeometry: Equatable, Sendable {
 
     public var hasNotch: Bool { notch != nil }
 
-    /// The strip at the top of the shape while collapsed: the notch height on a display with
-    /// one, the menu bar height on any other.
+    /// The strip at the top of the shape while collapsed.
     public var band: CGFloat { notch?.height ?? menuBarHeight }
 
-    /// The x the notch is centred on.
     var centreX: CGFloat { notch?.midX ?? frame.midX }
 
     /// The frame in global display coordinates (origin at the top left of the primary

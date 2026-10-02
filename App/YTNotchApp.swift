@@ -5,21 +5,16 @@ import SystemMedia
 import SwiftUI
 import WebPlayer
 
-/// The app target only wires the modules together.
-///
-/// The store runs on the web player: the one web view, on YouTube Music. For development and
-/// demos it can run on FakeEngine's canned tracks instead, with the `engine` setting:
-/// `defaults write io.github.kasra-r77.ytnotch engine fake`, or launch with `-engine fake`.
+/// To run on FakeEngine's canned tracks instead of the web player, launch with `-engine fake`
+/// or `defaults write io.github.kasra-r77.ytnotch engine fake`.
 @main
 struct YTNotchApp: App {
     @State private var store: PlayerStore
-    /// A notch on every display the "Show the notch on" setting chooses.
     private let notches: NotchDisplayManager
-    /// Shows the full window, on the site's sign-in with `true`. Nil on FakeEngine.
+    /// `true` opens on the site's sign-in. Nil on FakeEngine.
     private let openWindow: (@MainActor (Bool) -> Void)?
     private let retry: @MainActor () -> Void
     private let engineName: String
-    /// The update check, once the update keys exist (R5.2).
     private let updater = Updater()
 
     init() {
@@ -39,9 +34,8 @@ struct YTNotchApp: App {
             openWindow = { player.showWindow(signIn: $0) }
             retry = { player.retry() }
             engineName = "web player"
-            // Open, and Sign In while signed out, which goes to the site's sign-in.
             notches.openFullWindow = { player.showWindow(signIn: store.state.health.status == .signedOut) }
-            // Once the app has finished launching: the first launch opens on sign-in.
+            // In a Task, so it runs once the app has finished launching.
             Task { @MainActor in player.openOnFirstLaunch() }
         }
         notches.retry = retry

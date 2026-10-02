@@ -16,8 +16,6 @@ struct MessageStatesTests {
         _ = NSApplication.shared
     }
 
-    // MARK: Wording
-
     @Test func eachStateHasOneMessageAndAtMostOneButton() {
         let signedOut = MessagePresentation(.signedOut)
         #expect(signedOut.symbol == "person.crop.circle")
@@ -46,8 +44,6 @@ struct MessageStatesTests {
         #expect(loading.detail == "This takes a moment the first time.")
         #expect(loading.button == nil)
     }
-
-    // MARK: Which message
 
     @Test func theMessageFollowsTheStoresHealth() {
         let engine = FakeEngine()
@@ -85,8 +81,6 @@ struct MessageStatesTests {
         #expect(MessagePresentation.kind(for: store.state, forced: .missing([.like])) == nil)
     }
 
-    // MARK: Partly working
-
     @Test func missingPartsDimOrHide() {
         let store = PlayerStore(engine: FakeEngine())
         let p = PlayingPresentation(store.state, at: now, forced: .missing([.like, .seek, .shuffle, .repeatMode]))
@@ -96,8 +90,6 @@ struct MessageStatesTests {
         #expect(PlayingPresentation.help("Like", enabled: false) == "Like isn't available right now")
         #expect(PlayingPresentation.help("Like", enabled: true) == "Like")
     }
-
-    // MARK: Buttons
 
     @Test func theButtonsDoWhatTheySay() {
         var opened = 0, retried = 0, dismissed = 0
@@ -114,8 +106,6 @@ struct MessageStatesTests {
         #expect(!nothing.canPerform(.retry) && !nothing.canPerform(.openFullWindow))
     }
 
-    // MARK: Dismissing
-
     @Test func dismissClosesAtOnceAndWaitsForThePointerToLeave() {
         var machine = HoverMachine()
         machine.pointer(inside: true, buttonDown: false, at: now)
@@ -130,8 +120,6 @@ struct MessageStatesTests {
         machine.pointer(inside: true, buttonDown: false, at: now.addingTimeInterval(1.3))
         #expect(machine.phase == .dwell(since: now.addingTimeInterval(1.3)), "back after leaving")
     }
-
-    // MARK: The panel
 
     func panel(_ store: PlayerStore) -> NotchPanel {
         let panel = NotchPanel(screen: Displays.external, store: store, pointer: pointer)
@@ -184,8 +172,6 @@ struct MessageStatesTests {
         }
         #expect(retried == 2)
     }
-
-    // MARK: Drawing
 
     @Test func drawsTheMessageAndItsButton() throws {
         let view = ZStack(alignment: .top) {

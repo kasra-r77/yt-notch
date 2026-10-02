@@ -1,12 +1,10 @@
 import Foundation
 
-/// Remembers the last playlist list across launches.
 public protocol PlaylistCache {
     func load() -> [PlaylistItem]
     func save(_ items: [PlaylistItem])
 }
 
-/// Keeps the playlist list in user defaults, as JSON.
 public struct UserDefaultsPlaylistCache: PlaylistCache {
     private let defaults: UserDefaults
     private let key: String

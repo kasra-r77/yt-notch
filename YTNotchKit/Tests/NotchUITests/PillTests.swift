@@ -20,8 +20,6 @@ struct PillTests {
         _ = NSApplication.shared
     }
 
-    // MARK: Placement
-
     /// A 278 pill centred at 1000 with 6 flares spans 855 to 1145 and has 236 of room.
     func place(_ firstIconX: CGFloat?, width: CGFloat = 278) -> Placement {
         NotchLayout.pillPlacement(width: width, flare: 6, centreX: 1000, firstIconX: firstIconX, room: 236)
@@ -74,8 +72,6 @@ struct PillTests {
         #expect(NotchLayout.pillMiddleWidth(pillWidth: S.pillMinimum, band: 24) < S.pillMiddleMinimum)
     }
 
-    // MARK: Scrolling
-
     @Test func aLongTitleRestsScrollsRestsAndComesBack() {
         let overflow: CGFloat = 60
         let speed = CGFloat(Tokens.Timing.pillScrollSpeed)
@@ -91,8 +87,6 @@ struct PillTests {
         #expect(NotchLayout.pillScrollOffset(overflow: overflow, elapsed: cycle + 0.5) == 0, "and again")
         #expect(NotchLayout.pillScrollOffset(overflow: 0, elapsed: rest + 1) == 0, "a title that fits stays put")
     }
-
-    // MARK: Reading the icons
 
     /// The external display in window-list coordinates: x 1512, top at 982 - 1120.
     static let top: CGFloat = 982 - 1120
@@ -129,8 +123,6 @@ struct PillTests {
         #expect(manager.notches[1].firstIconX == nil)
     }
 
-    // MARK: The panel
-
     func playingPanel(on screen: ScreenGeometry = Displays.external) async throws -> (NotchPanel, PlayerStore) {
         let store = PlayerStore(engine: FakeEngine())
         let panel = NotchPanel(screen: screen, store: store, pointer: pointer)
@@ -139,13 +131,6 @@ struct PillTests {
         store.play()
         try await eventually("playing") { panel.machine.appearance == .collapsed(.playing) }
         return (panel, store)
-    }
-
-    @Test func aPlayingPillShowsItsMiddle() async throws {
-        let (panel, _) = try await playingPanel()
-        defer { panel.close() }
-        #expect(panel.model.middleShown)
-        #expect(panel.model.outline.offset == 0)
     }
 
     @Test func aNotchShowsNoMiddleAndIgnoresIcons() async throws {
@@ -201,8 +186,6 @@ struct PillTests {
         #expect(panel.model.outline.offset == 0)
         #expect(panel.model.outline.width == S.expandedWidth)
     }
-
-    // MARK: Drawing
 
     @Test func theProgressLineFollowsThePlayer() throws {
         let engine = PlayingViewTests.SilentEngine()

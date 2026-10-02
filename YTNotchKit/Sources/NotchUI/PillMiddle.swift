@@ -1,17 +1,13 @@
 import PlayerCore
 import SwiftUI
 
-/// The playing pill's middle on a screen without a notch (D8, option A): the title, 6, the
-/// artist, centred between the artwork and the bars. Too long for the middle, it scrolls
-/// while music plays: it rests at the start, scrolls to the end, rests, scrolls back, with
-/// its edges fading. Paused, or under Reduce Motion, it rests at the start.
+/// The playing pill's middle on a screen without a notch (D8, option A).
 struct PillTitle: View {
     let title: String
     let artist: String
     let isPlaying: Bool
     let reduceMotion: Bool
 
-    /// When the current pass started: a new song, or playback starting, begins at the start.
     @State private var started = Date()
 
     var body: some View {
@@ -63,8 +59,6 @@ struct PillTitle: View {
     }
 }
 
-/// How far through the song, as a 2 pt line in the accent along the pill's bottom edge on
-/// white 15%. It moves on twice a second while playing and holds while paused.
 struct PillProgressLine: View {
     let state: PlayerState
     let accent: SwiftUI.Color

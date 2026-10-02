@@ -2,12 +2,11 @@ import AppKit
 import Observation
 import PlayerCore
 
-/// Which displays show a notch (design spec, "Two or more displays").
 public enum NotchDisplaySetting: Equatable, Sendable, Codable {
     case all
     case builtInOnly
-    /// The displays picked by their `ScreenGeometry.key`, so a pick survives reconnecting
-    /// the display and restarting the Mac.
+    /// By `ScreenGeometry.key`, so a pick survives reconnecting the display and restarting
+    /// the Mac.
     case picked(Set<String>)
 
     public func includes(_ screen: ScreenGeometry) -> Bool {
@@ -20,7 +19,6 @@ public enum NotchDisplaySetting: Equatable, Sendable, Codable {
 
     static let defaultsKey = "notchDisplays"
 
-    /// The saved setting; all displays when nothing is saved or it can't be read.
     public static func load(from defaults: UserDefaults) -> NotchDisplaySetting {
         guard let data = defaults.data(forKey: defaultsKey),
               let setting = try? JSONDecoder().decode(NotchDisplaySetting.self, from: data)
@@ -33,18 +31,11 @@ public enum NotchDisplaySetting: Equatable, Sendable, Codable {
     }
 }
 
-/// Keeps exactly one notch on every chosen display.
-///
-/// It rebuilds the panels whenever displays are added, removed or rearranged and whenever
-/// the setting changes: panels for displays that are gone or no longer chosen close, panels
-/// that stay take their display's new sizes, and new displays get a panel that fades in. It
-/// also hides a display's notch while another app is full screen there.
-///
-/// It knows nothing about the player, so display changes never reach the web view.
+/// Keeps exactly one notch on every chosen display. It knows nothing about the player, so
+/// display changes never reach the web view.
 @MainActor
 @Observable
 public final class NotchDisplayManager {
-    /// Saved as it changes.
     public var setting: NotchDisplaySetting {
         didSet {
             guard setting != oldValue else { return }
@@ -62,17 +53,13 @@ public final class NotchDisplayManager {
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let pointer: PointerTracker
     @ObservationIgnored private let store: PlayerStore?
-    /// What Open in the notch does: show the full window. The app sets it.
     @ObservationIgnored public var openFullWindow: (@MainActor () -> Void)? {
         didSet { for panel in panels.values { panel.openFullWindow = openFullWindow } }
     }
-    /// What Try Again does: load the page again now. The app sets it.
     @ObservationIgnored public var retry: (@MainActor () -> Void)? {
         didSet { for panel in panels.values { panel.retry = retry } }
     }
 
-    /// A message or missing parts forced over what the player reports, on every notch (the
-    /// debug menu). Nil shows the real state.
     public var forcedState: NotchForcedState? {
         didSet { for panel in panels.values { panel.forcedState = forcedState } }
     }
@@ -115,7 +102,6 @@ public final class NotchDisplayManager {
         displays.compactMap { panels[$0.key] }
     }
 
-    /// Closes every notch and stops following the system.
     public func stop() {
         for (center, observer) in observers { center.removeObserver(observer) }
         observers.removeAll()
@@ -125,9 +111,6 @@ public final class NotchDisplayManager {
         panels.removeAll()
     }
 
-    // MARK: Rebuilding
-
-    /// Brings the panels in line with the connected displays and the setting.
     func rebuild() {
         displays = Self.uniqueKeys(readScreens())
         let chosen = displays.filter(setting.includes)
@@ -159,8 +142,6 @@ public final class NotchDisplayManager {
         }
     }
 
-    /// One look at the window list for every display: is another app full screen there, and
-    /// where do the menu bar icons start (for a pill to keep clear of them, D8).
     func refreshWindows() {
         guard !panels.isEmpty else { return }
         let windows = readWindows()
@@ -174,8 +155,6 @@ public final class NotchDisplayManager {
             }
         }
     }
-
-    // MARK: Following the system
 
     private func startObserving() {
         let app = NotificationCenter.default

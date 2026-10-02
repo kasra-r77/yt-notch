@@ -1,7 +1,6 @@
 import Foundation
 @testable import PlayerCore
 
-/// Records the commands the store sends and lets a test push events.
 @MainActor
 final class SpyEngine: PlayerEngine {
     private(set) var sent: [PlayerCommand] = []
@@ -14,7 +13,6 @@ final class SpyEngine: PlayerEngine {
     func emit(_ events: PlayerEvent...) { events.forEach { onEvent?($0) } }
 }
 
-/// A clock a test can move by hand.
 @MainActor
 final class TestClock {
     var now = Date(timeIntervalSinceReferenceDate: 1_000_000)
@@ -38,7 +36,6 @@ enum Fixture {
         track: track, position: 40, isPlaying: true, canNext: true, canPrevious: true, liked: false
     )
 
-    /// A store whose engine has reported a signed-in page with everything available.
     @MainActor
     static func readyStore(clock: TestClock = TestClock()) -> (PlayerStore, SpyEngine) {
         let engine = SpyEngine()

@@ -3,7 +3,6 @@ import Foundation
 import Testing
 @testable import NotchUI
 
-/// The display manager against displays the test plugs in and out.
 @MainActor
 @Suite(.serialized)
 struct NotchDisplayManagerTests {
@@ -17,7 +16,6 @@ struct NotchDisplayManagerTests {
         }
     }
 
-    /// A second external display, left of the built-in one.
     static let leftMonitor = ScreenGeometry(
         displayID: 4, key: "left", name: "Left Monitor",
         frame: CGRect(x: -1920, y: 0, width: 1920, height: 1080), notch: nil, menuBarHeight: 30

@@ -3,15 +3,12 @@ import AppKit
 import Observation
 import Sparkle
 
-/// The update check (R5.2), through Sparkle: a daily check in the background, and Check for
-/// Updates… in the menu. It starts only when the app carries the public half of the update
-/// signing key (`SUPublicEDKey`); without it there is no check, no menu item and no Updates
-/// pane, so nothing half-works before the owner has made the keys (README, "Updates").
+/// Sparkle starts only when the app carries the public update key (`SUPublicEDKey`), so
+/// nothing half-works before the owner has made the keys (README, "Updates").
 @MainActor
 @Observable
 final class Updater: NSObject, SPUUpdaterDelegate {
     @ObservationIgnored private var controller: SPUStandardUpdaterController?
-    /// A check found an update, which waits to be installed.
     private(set) var updateWaiting = false
     private(set) var lastChecked: Date?
 
@@ -26,7 +23,6 @@ final class Updater: NSObject, SPUUpdaterDelegate {
 
     var isEnabled: Bool { controller != nil }
 
-    /// Checks now and reports in Sparkle's own window.
     func checkForUpdates() {
         NSApp.activate()
         controller?.checkForUpdates(nil)

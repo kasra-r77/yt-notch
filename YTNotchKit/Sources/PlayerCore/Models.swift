@@ -1,6 +1,5 @@
 import Foundation
 
-/// A track as the bridge reports it.
 public struct Track: Equatable, Sendable, Identifiable {
     public var id: String
     public var title: String
@@ -27,13 +26,12 @@ public struct Track: Equatable, Sendable, Identifiable {
     }
 }
 
-/// A playlist from the user's library. The site exposes no thumbnail for most playlists
-/// (spike report, S0.4), so `thumbnailURL` is usually nil.
+/// The site exposes no thumbnail for most playlists (spike report, S0.4), so `thumbnailURL`
+/// is usually nil.
 public struct PlaylistItem: Equatable, Sendable, Identifiable, Codable {
     public var id: String
     public var title: String
     public var thumbnailURL: URL?
-    /// The user's liked songs, which the Playlists view pins first with its own tile.
     public var isLikedMusic: Bool
 
     public init(id: String, title: String, thumbnailURL: URL? = nil, isLikedMusic: Bool = false) {
@@ -57,15 +55,12 @@ public struct PlaylistItem: Equatable, Sendable, Identifiable, Codable {
     }
 }
 
-/// One entry in the queue, in queue order.
 public struct QueueItem: Equatable, Sendable, Identifiable {
     public var index: Int
     public var title: String
     public var artist: String
     public var isCurrent: Bool
-    /// The track's picture, when the page shows one.
     public var artworkURL: URL?
-    /// In seconds, when the page shows the length.
     public var duration: TimeInterval?
 
     public var id: Int { index }
@@ -83,7 +78,7 @@ public struct QueueItem: Equatable, Sendable, Identifiable {
 public enum RepeatMode: String, Equatable, Sendable, CaseIterable {
     case off, all, one
 
-    /// The mode after this one, in the order the site's repeat button cycles.
+    /// In the order the site's repeat button cycles.
     public var next: RepeatMode {
         switch self {
         case .off: .all
@@ -93,8 +88,7 @@ public enum RepeatMode: String, Equatable, Sendable, CaseIterable {
     }
 }
 
-/// A part of the player the bridge can report as missing. A missing feature's controls are
-/// dimmed and its commands are not sent. Raw values are the names the bridge uses.
+/// A part of the page the bridge can report as missing. Raw values are the bridge's names.
 public enum Feature: String, Hashable, Sendable, CaseIterable {
     case playPause
     case next
@@ -109,18 +103,14 @@ public enum Feature: String, Hashable, Sendable, CaseIterable {
 
 public struct Health: Equatable, Sendable {
     public enum Status: Equatable, Sendable {
-        /// The page has not reported ready yet.
         case starting
         case ok
-        /// The page shows its sign-in prompt.
         case signedOut
-        /// The page failed to load, or the network is gone.
         case offline
         /// Recovery gave up. No commands are sent until the page reports ready again.
         case bridgeBroken
 
-        /// Signed out, offline or broken: something only the user can sort out, so the menu
-        /// bar icon shows its dot and the menu a line saying what (design spec D7).
+        /// Something only the user can sort out: the menu bar icon shows its dot (design spec D7).
         public var needsAttention: Bool {
             switch self {
             case .signedOut, .offline, .bridgeBroken: true
@@ -130,7 +120,6 @@ public struct Health: Equatable, Sendable {
     }
 
     public var status: Status
-    /// Parts of the page the bridge could not find. Their controls are dimmed.
     public var missing: Set<Feature>
 
     public init(status: Status = .starting, missing: Set<Feature> = []) {
@@ -139,16 +128,14 @@ public struct Health: Equatable, Sendable {
     }
 }
 
-/// The bridge's `state` message: what is playing and where.
 public struct PlaybackSnapshot: Equatable, Sendable {
     public var track: Track?
-    /// Seconds into the track.
     public var position: TimeInterval
     public var isPlaying: Bool
     public var canNext: Bool
     public var canPrevious: Bool
     public var liked: Bool
-    /// The library playlist playing now, if the page says; nil for anything else.
+    /// Nil unless a library playlist is playing and the page says which.
     public var playlistID: String?
 
     public init(

@@ -2,8 +2,7 @@ import AppKit
 import PlayerCore
 import SwiftUI
 
-/// The expanded Playing view, 400 × 148 (design spec D2). Positions are from the body's top
-/// left; a notch taller than 32 moves everything below the band down by the difference.
+/// The expanded Playing view (design spec D2). Positions are from the body's top left.
 struct PlayingView: View {
     let state: PlayerState
     let model: NotchModel
@@ -32,8 +31,6 @@ struct PlayingView: View {
         }
     }
 
-    // MARK: The band
-
     private func band(_ p: PlayingPresentation) -> some View {
         let bandHeight = S.expandedBand + extra
         return HStack(spacing: 0) {
@@ -53,8 +50,6 @@ struct PlayingView: View {
         .padding(.horizontal, S.expandedPadding)
         .frame(width: S.expandedWidth, height: bandHeight)
     }
-
-    // MARK: Title and artist
 
     @ViewBuilder private func titleAndArtist(_ p: PlayingPresentation) -> some View {
         if p.hasTrack {
@@ -84,10 +79,8 @@ struct PlayingView: View {
         }
     }
 
-    // MARK: Controls
-
-    /// Shuffle, previous, play or pause, next, repeat: each takes a 44 wide column down to
-    /// the bottom edge, so a click between two controls lands on the nearer one.
+    /// Each control takes a 44 wide column down to the bottom edge, so a click between two
+    /// controls lands on the nearer one.
     private func controls(_ p: PlayingPresentation) -> some View {
         let height = S.expandedPlayingHeight + extra - (S.controlsY + extra)
         return HStack(spacing: 0) {
@@ -119,7 +112,6 @@ struct PlayingView: View {
     }
 }
 
-/// Open, in the right ear of every view: shows the full window and closes the notch.
 struct OpenButton: View {
     let actions: NotchActions
 
@@ -134,8 +126,6 @@ struct OpenButton: View {
     }
 }
 
-/// The view switcher in the left ear: Playing, Playlists, Up next. A tab whose view has no
-/// data is hidden and the others close up.
 struct ViewSwitcher: View {
     let selected: HoverMachine.ExpandedView
     let showsPlaylists: Bool
@@ -161,15 +151,11 @@ struct ViewSwitcher: View {
     }
 }
 
-/// Every control in the notch: 28 square, radius 8. Hover white 10%, pressed and selected
-/// white 16%, unavailable white 25% with no hover. A quiet control (an unselected tab, a
-/// toggle that is off) rests at 60% and comes up to 100% under the pointer. A toggle that is
-/// on gets a 4 pt dot under its icon.
 struct NotchControlStyle: ButtonStyle {
     var quiet = false
     var isOn = false
     var isSelected = false
-    /// The area that takes the click, if larger than the 28 square (it grows down and out).
+    /// The click area, if larger than the control; it grows down and out.
     var hitSize: CGSize?
 
     func makeBody(configuration: Configuration) -> some View {
@@ -220,9 +206,7 @@ private struct NotchControlBody: View {
     }
 }
 
-/// Elapsed, the track, total; 268 wide with a 28 tall band that takes clicks and drags.
-/// Idle: no knob. Hover: a 10 pt knob. Dragging: a 12 pt knob with a halo, and the elapsed
-/// time follows it; the seek happens on release.
+/// While dragging, the elapsed time follows the knob; the seek happens on release.
 struct ProgressBand: View {
     let presentation: PlayingPresentation
     let accent: SwiftUI.Color

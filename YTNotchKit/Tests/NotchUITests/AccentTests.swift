@@ -6,7 +6,6 @@ import Testing
 /// The accent rule from D5: the artwork's dominant colour, lifted to 3:1 on black; white for
 /// near-grey artwork and none.
 struct AccentTests {
-    /// A square image of one colour, with an optional patch of another in a corner.
     static func image(_ base: UInt32, patch: UInt32? = nil, patchSide: Int = 0, side: Int = 48) -> CGImage {
         let context = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
                                 space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!

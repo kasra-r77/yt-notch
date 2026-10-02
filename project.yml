@@ -1,5 +1,4 @@
-# The Xcode project is generated from this file with XcodeGen. Edit this file, never the
-# generated YTNotch.xcodeproj (it is not committed).
+# XcodeGen spec. Edit this, never the generated YTNotch.xcodeproj (it is not committed).
 name: YTNotch
 
 options:
@@ -14,7 +13,7 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_HARDENED_RUNTIME: YES
-    # Local builds are signed ad hoc. The release workflow (R5.1) signs with a Developer ID.
+    # Signed ad hoc: there is no Developer ID yet (docs/decisions.md).
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "-"
     DEVELOPMENT_TEAM: ""
@@ -24,7 +23,7 @@ settings:
 packages:
   YTNotchKit:
     path: YTNotchKit
-  # The update check (R5.2). MIT licensed; the app target only.
+  # MIT licensed; the app target only.
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     exactVersion: 2.10.0
@@ -62,9 +61,8 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         LSUIElement: true
         NSHumanReadableCopyright: Copyright © 2026 Kasra Rismanchi. Apache License 2.0.
-        # Sparkle: the feed every release publishes, a daily check, and the public half of
-        # the update signing key. Empty until the owner makes the keys (README, "Updates");
-        # until then the app doesn't start the updater.
+        # SUPublicEDKey stays empty until the owner makes the update keys (README, "Updates");
+        # while it is empty the app doesn't start the updater.
         SUFeedURL: https://github.com/kasra-r77/yt-notch/releases/latest/download/appcast.xml
         SUEnableAutomaticChecks: true
         SUScheduledCheckInterval: 86400

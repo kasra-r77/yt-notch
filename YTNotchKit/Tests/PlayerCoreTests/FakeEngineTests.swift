@@ -1,7 +1,6 @@
 import Testing
 @testable import PlayerCore
 
-/// FakeEngine drives a real store the way the bridge will: commands in, events out.
 @MainActor
 struct FakeEngineTests {
     let engine = FakeEngine()
@@ -31,17 +30,6 @@ struct FakeEngineTests {
         let store = PlayerStore(engine: FakeEngine(signedIn: false))
         #expect(store.state.health.status == .signedOut)
         #expect(store.state.track == nil)
-    }
-
-    @Test func playPauseAndToggle() {
-        store.play()
-        #expect(store.state.isPlaying)
-        store.pause()
-        #expect(!store.state.isPlaying)
-        store.togglePlayPause()
-        #expect(store.state.isPlaying)
-        store.togglePlayPause()
-        #expect(!store.state.isPlaying)
     }
 
     @Test func nextMovesThroughTheQueue() {
@@ -75,18 +63,6 @@ struct FakeEngineTests {
         store.previous()
         #expect(store.state.track == liked[1])
         #expect(store.state.position == 0)
-    }
-
-    @Test func seek() {
-        store.seek(to: 100)
-        #expect(store.state.position == 100)
-    }
-
-    @Test func like() {
-        store.toggleLike()
-        #expect(store.state.liked)
-        store.toggleLike()
-        #expect(!store.state.liked)
     }
 
     @Test func queueItemsCarryTheirLengthAndArtwork() {

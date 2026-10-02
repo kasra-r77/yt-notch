@@ -3,7 +3,6 @@ import Observation
 import Testing
 @testable import PlayerCore
 
-/// How events become state, and what the state offers views.
 @MainActor
 struct StateTests {
     @Test func stateEventFillsPlayback() {

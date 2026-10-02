@@ -3,19 +3,9 @@ import Observation
 import PlayerCore
 import SwiftUI
 
-/// The notch on one display.
-///
-/// A borderless panel above the menu bar, on every Space, that never takes keyboard focus
-/// and never activates the app, so typing elsewhere is never interrupted. It stays the same
-/// size and draws each shape top-centred. Only the shape takes clicks: the panel ignores
-/// mouse events except while the pointer is inside the target shape, so everywhere else
-/// clicks reach the app underneath. It fades in when it is built, and fades out while another
-/// app is full screen on its display.
-///
-/// Each panel runs its own `HoverMachine`, fed by the pointer, the store and a timer for the
-/// machine's deadlines, and animates to the shape the machine's appearance calls for (design
-/// spec, "Motion"). `NotchDisplayManager` creates and removes panels and tells them about
-/// display changes and full screen.
+/// The notch on one display. It never takes keyboard focus or activates the app, so typing
+/// elsewhere is never interrupted. It ignores mouse events except while the pointer is inside
+/// the target shape, so clicks everywhere else reach the app underneath.
 ///
 /// Built on our own panel rather than DynamicNotchKit; see `docs/decisions.md`.
 @MainActor
@@ -25,7 +15,7 @@ public final class NotchPanel {
     public private(set) var isClosed = false
     /// A pill with no room left of the menu bar icons is hidden until there is (D8).
     public private(set) var isCrowdedOut = false
-    /// Where the first menu bar icon starts on this screen, in screen x.
+    /// In screen x.
     public private(set) var firstIconX: CGFloat?
 
     let model: NotchModel
@@ -40,8 +30,7 @@ public final class NotchPanel {
     private var lastTrackID: String?
     private var reduceMotionObserver: NSObjectProtocol?
 
-    /// The clock the machine runs on. Tests replace it and turn `schedulesTicks` off to
-    /// drive `tick(at:)` themselves.
+    /// Tests replace the clock and turn `schedulesTicks` off to drive `tick(at:)` themselves.
     var now: () -> Date = Date.init
     var schedulesTicks = true
 
@@ -87,8 +76,6 @@ public final class NotchPanel {
         refreshHitTesting()
     }
 
-    /// Takes new sizes and position after the display changed (resolution, arrangement,
-    /// menu bar).
     public func update(screen: ScreenGeometry) {
         guard screen != self.screen else { return }
         self.screen = screen
@@ -100,8 +87,6 @@ public final class NotchPanel {
         refreshHitTesting()
     }
 
-    /// Hides the notch while another app is full screen on this display, and shows it again
-    /// after. It fades over 0.15 s, closes at once if it was open, and takes no clicks.
     public func setFullScreen(_ isFullScreen: Bool) {
         guard isFullScreen != self.isFullScreen else { return }
         self.isFullScreen = isFullScreen
@@ -110,8 +95,7 @@ public final class NotchPanel {
         apply()
     }
 
-    /// Where the first menu bar icon on this screen starts, in screen x, or nil when there
-    /// are none. On a screen without a notch the pill keeps clear of it (D8).
+    /// `firstX` is in screen x, or nil when there are no icons.
     public func setMenuBarIcons(firstX: CGFloat?) {
         guard firstX != firstIconX else { return }
         firstIconX = firstX
@@ -130,7 +114,6 @@ public final class NotchPanel {
         set { model.actions.retry = newValue }
     }
 
-    /// Forces a message or missing parts over what the player reports (the debug menu).
     public var forcedState: NotchForcedState? {
         get { model.forcedState }
         set {
@@ -140,13 +123,11 @@ public final class NotchPanel {
         }
     }
 
-    /// Closes the notch at once (Open, Sign In, Open Full Window).
     func dismiss() {
         machine.dismiss(at: now())
         apply()
     }
 
-    /// Switches the open notch to another view (N2.7).
     public func select(_ view: HoverMachine.ExpandedView) {
         machine.select(view)
         apply()
@@ -165,8 +146,8 @@ public final class NotchPanel {
 
     // MARK: Hit testing
 
-    /// Whether a point in screen coordinates is inside the shape the notch is heading for.
-    /// While a shape animates, this is its target, as the spec asks.
+    /// `point` is in screen coordinates. While a shape animates, this tests its target, as the
+    /// spec asks.
     public func contains(_ point: CGPoint) -> Bool {
         let frame = window.frame
         // Most pointer moves are nowhere near the panel. Its top edge counts as inside.
@@ -179,8 +160,7 @@ public final class NotchPanel {
         return hitPath(in: frame.size).contains(local)
     }
 
-    /// The target shape's path, kept until the shape or the panel changes. CGPath's test,
-    /// not SwiftUI's: SwiftUI's `Path.contains` misreads the joined outline.
+    /// CGPath's test, not SwiftUI's: SwiftUI's `Path.contains` misreads the joined outline.
     private func hitPath(in size: CGSize) -> CGPath {
         if let cached = cachedHitPath, cached.outline == model.outline, cached.size == size { return cached.path }
         let path = NotchShape.path(model.outline, topCentre: CGPoint(x: size.width / 2, y: 0)).cgPath
@@ -203,13 +183,11 @@ public final class NotchPanel {
 
     // MARK: The machine
 
-    /// Moves the machine's clock on, then shows what it says.
     func tick(at time: Date) {
         machine.tick(at: time)
         apply()
     }
 
-    /// Brings the model, and so the view, in line with the machine.
     private func apply() {
         guard !isClosed else { return }
         let appearance = machine.appearance
@@ -239,8 +217,8 @@ public final class NotchPanel {
         scheduleTick()
     }
 
-    /// The outline for an appearance. A collapsed pill on a screen without a notch keeps clear
-    /// of the menu bar icons, or hides when it can't (D8).
+    /// Also updates `isCrowdedOut`: a collapsed pill hides when it can't keep clear of the menu
+    /// bar icons (D8).
     private func target(for appearance: HoverMachine.Appearance) -> NotchOutline {
         var outline = NotchLayout.outline(for: appearance, on: screen, peekTextWidth: peekTextWidth)
         var crowdedOut = false
@@ -261,7 +239,7 @@ public final class NotchPanel {
     }
 
     /// Wings, peek text and expanded content each fade on their own clock (design spec,
-    /// "Motion"): content in from 60% open, wings out at once and back near the end.
+    /// "Motion").
     private func applyFades(from previous: HoverMachine.Appearance, to appearance: HoverMachine.Appearance) {
         let reduce = model.reduceMotion
         let wings = appearance.showsWings
@@ -291,10 +269,7 @@ public final class NotchPanel {
         }
     }
 
-    /// Between views in the open notch, the old view fades out over 0.1 s at once and the new
-    /// one fades in over 0.15 s: when a resize is 60% of the way, or straight away between the
-    /// two lists, which share a size. Opening shows the view with no fade of its own: the
-    /// content as a whole fades in.
+    /// Opening shows the view with no fade of its own: the content as a whole fades in.
     private func switchContent(to content: HoverMachine.ExpandedContent, switching: Bool, reduce: Bool) {
         guard switching, let old = model.expandedContent else {
             model.viewTransition = .identity
@@ -322,8 +297,7 @@ public final class NotchPanel {
             : .linear(duration: Tokens.Timing.contentFadeOut)
     }
 
-    /// The shape has arrived. A peek starts its hold now; a resize lets the grace start if
-    /// it left the pointer outside. Tests call it to stand for the animation finishing.
+    /// The shape has arrived. Tests call it to stand for the animation finishing.
     func settled() {
         guard !isClosed else { return }
         let time = now()
@@ -350,7 +324,6 @@ public final class NotchPanel {
         NotchLayout.peekTextWidth(title: model.title, artist: model.artist)
     }
 
-    /// Reads the store now, and again after each change to what the notch shows.
     private func observeStore() {
         guard let store, !isClosed else { return }
         withObservationTracking {
@@ -378,7 +351,6 @@ public final class NotchPanel {
         apply()
     }
 
-    /// The track's artwork from what the page handed over, or the placeholder until it has.
     private func showArtwork(_ url: URL?, in state: PlayerState) {
         let artwork = url.flatMap { url in state.artwork[url].flatMap { images.artwork(for: url, data: $0) } }
         if model.artwork !== artwork?.image { model.artwork = artwork?.image }
@@ -392,7 +364,6 @@ extension HoverMachine.Appearance {
         if case .expanded = self { true } else { false }
     }
 
-    /// Artwork and bars show in the wings while collapsed and playing or peeking.
     var showsWings: Bool {
         self == .collapsed(.playing) || self == .collapsed(.peek)
     }
@@ -404,13 +375,10 @@ extension HoverMachine.Appearance {
 final class NotchModel {
     var outline: NotchOutline
     var appearance: HoverMachine.Appearance = .collapsed(.idle)
-    /// The collapsed band: notch height, or menu bar height.
     var band: CGFloat
     var isHidden = false
     var reduceMotion = false
     var wingsShown = false
-    /// A pill on a screen without a notch shows the title and a progress line between its
-    /// wings while there is room (D8).
     var middleShown = false
     var peekShown = false
     var contentShown = false
@@ -423,9 +391,7 @@ final class NotchModel {
     var expandedExtra: CGFloat = 0
     /// What the open notch shows, kept after it closes so the content can fade out.
     var expandedContent: HoverMachine.ExpandedContent?
-    /// How a view comes and goes when the open notch switches views.
     var viewTransition: AnyTransition = .identity
-    /// The message the open notch shows instead of a view, if any.
     var message: NotchMessage?
     var forcedState: NotchForcedState?
     var actions = NotchActions(store: nil)
@@ -442,7 +408,6 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-/// The panel itself: borderless, non-activating, never key or main.
 final class NotchWindow: NSPanel {
     init(frame: CGRect) {
         super.init(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)

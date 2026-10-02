@@ -2,9 +2,7 @@ import AppKit
 import PlayerCore
 import SwiftUI
 
-/// The Playlists and Up next views, 400 × 300 (design spec D3): the band, 12, five 48 rows,
-/// 16. Both share the frame, so moving between them doesn't resize. A notch taller than 32
-/// moves everything below the band down by the difference.
+/// The Playlists and Up next views (design spec D3).
 struct ListView: View {
     let state: PlayerState
     let view: HoverMachine.ExpandedView
@@ -26,12 +24,10 @@ struct ListView: View {
         .frame(width: S.expandedWidth, height: S.expandedListHeight + extra, alignment: .top)
     }
 
-    /// A row's picture, from what the page handed over.
     private func image(_ url: URL) -> NSImage? {
         state.artwork[url].flatMap { ArtworkImages.shared.image(for: url, data: $0) }
     }
 
-    /// The switcher in the left ear with this list selected, and Open alone in the right.
     private func band(_ p: ListPresentation) -> some View {
         HStack(spacing: 0) {
             ViewSwitcher(selected: view, showsPlaylists: p.showsPlaylistsTab, showsUpNext: p.showsUpNextTab, select: actions.select)
@@ -43,9 +39,8 @@ struct ListView: View {
     }
 }
 
-/// Everything below the band: the saved-list line, then the rows, the loading rows or the
-/// empty state. Clipped to the shape's bottom corners, so rows scrolling under the bottom
-/// fade never show outside it.
+/// Clipped to the shape's bottom corners, so rows scrolling under the bottom fade never show
+/// outside it.
 struct ListBody: View {
     let presentation: ListPresentation
     let accent: SwiftUI.Color
@@ -78,9 +73,6 @@ struct ListBody: View {
     }
 }
 
-/// The rows, scrolling under the band and clipped 12 below it. Five show. Once scrolled,
-/// the clip line gets a divider and a fade; while rows wait below, the bottom edge fades.
-/// A list that fits doesn't scroll and has neither. It opens with what plays now at the top.
 struct RowList: View {
     let rows: [ListRow]
     let currentRowID: ListRow.ID?
@@ -133,7 +125,6 @@ struct RowList: View {
         }
     }
 
-    /// The clip line once scrolled: a 0.5 divider and a 12 fade from black.
     private var clipEdge: some View {
         VStack(spacing: 0) {
             Tokens.Color.divider.frame(height: S.divider)
@@ -150,11 +141,8 @@ struct RowList: View {
     }
 }
 
-/// One row: the tile, 12, the text, then what trails it. Long text is cut at the tail; the
-/// bars and the length never are. The whole row takes the click, on release.
 struct ListRowView: View {
     let row: ListRow
-    /// The track's artwork, for an artwork tile; nil shows the placeholder.
     var image: NSImage?
     let isPlaying: Bool
     let accent: SwiftUI.Color
@@ -207,8 +195,6 @@ struct ListRowView: View {
     }
 }
 
-/// White 10% behind the row playing now, 6% under the pointer, 14% pressed (the playing
-/// row included). Radius 8.
 struct ListRowStyle: ButtonStyle {
     let isCurrent: Bool
 
@@ -236,7 +222,6 @@ private struct ListRowBody: View {
     }
 }
 
-/// A 32 tile at radius 6: an icon on white 8% for a playlist, or the track's artwork.
 struct RowTile: View {
     let tile: ListRow.Tile
     let image: NSImage?
@@ -258,8 +243,6 @@ struct RowTile: View {
     }
 }
 
-/// The playing marker: three accent bars, 3 wide and 2 apart. They swing while audio plays
-/// and rest at 6, 10 and 4 otherwise, with the timeline paused.
 struct ListBars: View {
     let accent: SwiftUI.Color
     let isAnimating: Bool
@@ -285,8 +268,6 @@ struct ListBars: View {
     }
 }
 
-/// Five still rows while a list is first read: a tile and a bar, and a second, shorter bar
-/// in Up next.
 struct LoadingRows: View {
     let twoLines: Bool
 
@@ -319,7 +300,6 @@ struct LoadingRows: View {
     }
 }
 
-/// Above a remembered list: the rows still play, but may not match the site.
 struct SavedLine: View {
     var body: some View {
         HStack(spacing: Tokens.Size.savedIconGap) {
@@ -334,7 +314,6 @@ struct SavedLine: View {
     }
 }
 
-/// An empty list: a 24 icon at 30%, the title and a line of detail, centred below the band.
 struct EmptyListView: View {
     let empty: ListPresentation.EmptyList
 

@@ -1,12 +1,9 @@
 import AppKit
 
-/// Tells whether another app is full screen on a display: one of its windows at the normal
-/// level covers the whole display. The window list gives every window's owner, level and
-/// bounds without the screen recording permission.
-///
-/// Checked on the spike Mac (macOS 26): a full-screen window shows up as a level 0 window
-/// exactly the size of the display. Collection behaviour alone doesn't keep a panel off a
-/// full-screen Space, so the panel needs this to hide itself.
+/// Another app is full screen on a display when one of its windows at level 0 is exactly the
+/// size of the display (checked on macOS 26). The window list reports that without the screen
+/// recording permission. Collection behaviour alone doesn't keep a panel off a full-screen
+/// Space, so the panel needs this to hide itself.
 enum FullScreenDetector {
     struct WindowInfo: Equatable {
         var ownerPID: pid_t

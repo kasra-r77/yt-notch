@@ -1,10 +1,9 @@
 import AppKit
 
 /// Where other apps' menu bar icons are, so a pill can keep clear of them (D8). The window
-/// list gives each icon's window, its level and its bounds without any permission (its title,
-/// which would need the screen recording permission, isn't read). On macOS 26 every icon's
-/// window belongs to Control Centre; before that, to its own app. Either way they sit at the
-/// status window level along the top of the screen.
+/// list gives each icon's level and bounds without any permission; titles would need screen
+/// recording, so they aren't read. On macOS 26 every icon's window belongs to Control
+/// Centre, before that to its own app; either way they sit at the status window level.
 enum MenuBarIcons {
     static var statusLevel: Int { Int(CGWindowLevelForKey(.statusWindow)) }
 

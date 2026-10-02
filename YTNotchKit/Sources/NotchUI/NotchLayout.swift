@@ -3,7 +3,6 @@ import SwiftUI
 
 /// The shape for each thing the notch can show on a display (design spec, "Shapes").
 enum NotchLayout {
-    /// The collapsed width before wings: the hardware notch, or the pill.
     static func baseWidth(on screen: ScreenGeometry) -> CGFloat {
         screen.notch?.width ?? Tokens.Size.pillWidth
     }
@@ -12,13 +11,11 @@ enum NotchLayout {
         baseWidth(on: screen) + 2 * Tokens.Size.wing
     }
 
-    /// How much taller the expanded shapes are when the band is taller than 32.
     static func expandedExtra(on screen: ScreenGeometry) -> CGFloat {
         max(0, screen.band - Tokens.Size.expandedBand)
     }
 
-    /// The target outline for an appearance. `peekTextWidth` is the width of the peek's
-    /// line of text, from `peekTextWidth(title:artist:)`.
+    /// `peekTextWidth` comes from `peekTextWidth(title:artist:)`.
     static func outline(for appearance: HoverMachine.Appearance, on screen: ScreenGeometry, peekTextWidth: CGFloat = 0) -> NotchOutline {
         let collapsed = { (width: CGFloat, height: CGFloat) in
             NotchOutline(width: width, height: height, bottomRadius: Tokens.Size.collapsedRadius, flare: Tokens.Size.collapsedFlare)
@@ -45,27 +42,21 @@ enum NotchLayout {
     static var peekTitleFont: NSFont { NSFont.systemFont(ofSize: Tokens.Size.titleText, weight: .semibold) }
     static var peekArtistFont: NSFont { NSFont.systemFont(ofSize: Tokens.Size.secondaryText, weight: .regular) }
 
-    /// The peek's one line: the title, 6, the artist.
     static func peekTextWidth(title: String, artist: String) -> CGFloat {
         let titleWidth = (title as NSString).size(withAttributes: [.font: peekTitleFont]).width
         let artistWidth = (artist as NSString).size(withAttributes: [.font: peekArtistFont]).width
         return ceil(titleWidth + (artist.isEmpty ? 0 : Tokens.Size.peekTextGap + artistWidth))
     }
 
-    // MARK: The pill without a notch (D8)
-
     static var pillTitleFont: NSFont { NSFont.systemFont(ofSize: Tokens.Size.pillText, weight: .semibold) }
     static var pillArtistFont: NSFont { NSFont.systemFont(ofSize: Tokens.Size.pillText, weight: .regular) }
 
-    /// The pill's middle line: the title, 6, the artist.
     static func pillTextWidth(title: String, artist: String) -> CGFloat {
         let titleWidth = (title as NSString).size(withAttributes: [.font: pillTitleFont]).width
         let artistWidth = (artist as NSString).size(withAttributes: [.font: pillArtistFont]).width
         return ceil(titleWidth + (artist.isEmpty ? 0 : Tokens.Size.pillTextGap + artistWidth))
     }
 
-    /// The width left for the middle in a playing pill this wide: between the artwork and the
-    /// bars, 10 clear of each.
     static func pillMiddleWidth(pillWidth: CGFloat, band: CGFloat) -> CGFloat {
         let bars = CGFloat(Tokens.Size.barRestHeights.count) * Tokens.Size.barWidth
             + CGFloat(Tokens.Size.barRestHeights.count - 1) * Tokens.Size.barGap
@@ -99,8 +90,8 @@ enum NotchLayout {
         return PillPlacement(width: smallest, offset: centre - centreX, isHidden: centre - smallest / 2 - flare < centreX - room)
     }
 
-    /// How far a title too long for the pill's middle has scrolled, `elapsed` seconds after it
-    /// started: it rests at the start, scrolls to the end, rests there, scrolls back.
+    /// `elapsed` seconds into a cycle that rests at the start, scrolls to the end, rests there
+    /// and scrolls back.
     static func pillScrollOffset(overflow: CGFloat, elapsed: TimeInterval) -> CGFloat {
         guard overflow > 0 else { return 0 }
         let speed = Tokens.Timing.pillScrollSpeed
@@ -114,7 +105,6 @@ enum NotchLayout {
         return max(0, overflow - CGFloat((phase - rest - travel - endRest) * speed))
     }
 
-    /// The square wing artwork for a band: 20, or smaller on a short band.
     static func wingArtworkSize(band: CGFloat) -> CGFloat {
         min(Tokens.Size.wingArtwork, band - Tokens.Size.wingArtworkClearance)
     }
@@ -124,15 +114,11 @@ enum NotchLayout {
     }
 }
 
-/// How the shape moves from one appearance to the next (design spec, "Motion").
 enum NotchMotion: Equatable {
     case none
-    /// Open, close, peek and resize.
     case spring
-    /// Idle to Playing and back: the wings grow out of the notch or draw back into it.
     case wingsIn
     case wingsOut
-    /// Reduce Motion: the two shapes crossfade in place.
     case crossfade
 
     static func between(_ old: HoverMachine.Appearance, _ new: HoverMachine.Appearance, reduceMotion: Bool) -> NotchMotion {

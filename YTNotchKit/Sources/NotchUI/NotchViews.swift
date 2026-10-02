@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Everything the notch draws, top-centred in its panel: the shape, the wings, the peek's
-/// line and the expanded content.
 struct NotchRootView: View {
     let model: NotchModel
     /// False for the first frame, so a new notch fades in.
@@ -45,9 +43,7 @@ struct NotchRootView: View {
     }
 }
 
-/// Artwork on the left wing, bars on the right, 12 in from each outer edge, on the band.
-/// Nothing is drawn where the real notch is: both sit in the outer 44. A pill on a screen
-/// without a notch shows the title between them and a progress line along its bottom (D8).
+/// Nothing is drawn where the real notch is: the artwork and the bars sit in the outer 44.
 struct WingsView: View {
     let model: NotchModel
 
@@ -82,7 +78,6 @@ struct ArtworkTile: View {
     let image: NSImage?
     let size: CGFloat
     let radius: CGFloat
-    /// Drawn on the placeholder when there is no artwork.
     var placeholderSymbol: String?
 
     var body: some View {
@@ -103,8 +98,7 @@ struct ArtworkTile: View {
     }
 }
 
-/// Four bars in the accent. They swing while audio plays and rest otherwise; at rest the
-/// timeline is paused, so a paused notch costs nothing.
+/// At rest the timeline is paused, so a paused notch costs nothing.
 struct BarsView: View {
     let accent: SwiftUI.Color
     let isAnimating: Bool
@@ -126,7 +120,6 @@ struct BarsView: View {
     }
 }
 
-/// The height of one bar at a moment.
 enum BarMotion {
     static func height(bar: Int, at time: TimeInterval, isAnimating: Bool, maxHeight: CGFloat) -> CGFloat {
         let scale = maxHeight / Tokens.Size.barMaxHeight
@@ -140,8 +133,7 @@ enum BarMotion {
     }
 }
 
-/// The peek's one line under the band: the title, 6, the artist, centred. The title is cut
-/// first; the artist stays whole.
+/// The title is cut first; the artist stays whole.
 struct PeekLine: View {
     let model: NotchModel
 
@@ -174,9 +166,7 @@ struct PeekLine: View {
     private var lineHeight: CGFloat { Tokens.Size.peekRow - Tokens.Size.peekTextTop }
 }
 
-/// Where the expanded views go: Playing (N2.5), the messages (N2.6) and the lists (N2.7).
-/// Laid out at the final size and revealed by the growing shape; it takes clicks only
-/// while shown. Switching views fades the old one out and the new one in.
+/// Laid out at the final size and revealed by the growing shape.
 struct ExpandedContent: View {
     let model: NotchModel
 

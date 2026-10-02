@@ -1,7 +1,6 @@
 import Foundation
 import PlayerCore
 
-/// What a test target provides to run the scenarios against its engine.
 @MainActor
 public struct EngineHarness {
     public let store: PlayerStore

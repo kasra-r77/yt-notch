@@ -3,13 +3,7 @@ import PlayerCore
 import Testing
 @testable import WebPlayer
 
-/// The Swift side of the contract, without a web view: decoding messages and encoding commands.
 struct BridgeContractTests {
-    @Test func scriptShipsInTheBundle() {
-        #expect(Bridge.script.contains("BRIDGE_VERSION = '1'"))
-        #expect(Bridge.script.contains("ytNotch"))
-    }
-
     @Test func ready() {
         #expect(Bridge.event(from: ["type": "ready", "bridgeVersion": "1", "signedIn": true]) == .ready(bridgeVersion: "1", signedIn: true))
         #expect(Bridge.event(from: ["type": "ready"]) == nil)

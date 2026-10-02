@@ -1,8 +1,6 @@
 import AppKit
 
-/// Follows the pointer over the whole desktop, whichever app it is over, so each notch can
-/// take clicks only inside its shape (and, from N2.3, hover). Watching mouse movement needs
-/// no permission; only keyboard monitoring would.
+/// Watching mouse movement needs no permission; only keyboard monitoring would.
 @MainActor
 public final class PointerTracker {
     public static let shared = PointerTracker()
@@ -13,7 +11,7 @@ public final class PointerTracker {
     private var nextID = 0
     private var monitors: [Any] = []
 
-    /// Moves, and presses and releases too: letting go of a held button can start a dwell.
+    /// Presses and releases too: letting go of a held button can start a dwell.
     private static let movement: NSEvent.EventTypeMask = [
         .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
         .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp,
@@ -60,7 +58,7 @@ public final class PointerTracker {
         deliver(NSEvent.mouseLocation)
     }
 
-    /// Hands a pointer location to every observer. Tests call it directly.
+    /// Tests call it directly.
     func deliver(_ location: CGPoint) {
         self.location = location
         for handler in handlers.values { handler(location) }

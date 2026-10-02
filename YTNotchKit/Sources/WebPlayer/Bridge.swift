@@ -1,9 +1,8 @@
 import Foundation
 import PlayerCore
 
-/// The Swift side of the bridge contract: the script to inject, how its messages become
-/// PlayerEvents, and how PlayerCommands become calls into it. Everything the app knows about
-/// the site itself stays in `bridge.js`.
+/// The Swift side of the bridge contract. Everything the app knows about the site itself
+/// stays in `bridge.js`.
 public enum Bridge {
     /// The `window.webkit.messageHandlers` name the script posts to.
     public static let messageHandlerName = "ytNotch"
@@ -17,20 +16,15 @@ public enum Bridge {
         return text
     }()
 
-    // MARK: Commands
-
-    /// The body for `callAsyncJavaScript` that runs a command, with `arguments(for:)`.
-    /// It resolves to `{ ok, error? }`.
+    /// Run with `arguments(for:)`; resolves to `{ ok, error? }`.
     public static let commandFunctionBody = """
     return window.__ytNotch ? window.__ytNotch.command(name, value) : { ok: false, error: 'bridge not attached' };
     """
 
-    /// Asks the bridge to report everything again. Resolves to false when it isn't attached.
     public static let refreshFunctionBody = """
     return Boolean(window.__ytNotch && window.__ytNotch.refresh && window.__ytNotch.refresh());
     """
 
-    /// The `name` and `value` arguments for `commandFunctionBody`.
     public static func arguments(for command: PlayerCommand) -> [String: Any] {
         let (name, value): (String, Any) = switch command {
         case .play: ("play", NSNull())
@@ -48,13 +42,9 @@ public enum Bridge {
         return ["name": name, "value": value]
     }
 
-    /// Opens the site's own sign-in, for the full window. Not a player command, so no
-    /// engine sends it.
+    /// Not a player command: only the full window opens the site's sign-in.
     public static var signInArguments: [String: Any] { ["name": "signIn", "value": NSNull()] }
 
-    // MARK: Messages
-
-    /// Turns a message body posted by the script into an event, or nil when it isn't one.
     public static func event(from body: Any) -> PlayerEvent? {
         guard let message = body as? [String: Any], let type = message["type"] as? String else { return nil }
         switch type {

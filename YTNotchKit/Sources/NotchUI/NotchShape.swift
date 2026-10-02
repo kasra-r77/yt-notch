@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// The one shape every notch state is drawn with, top-centred in its frame (moved by the
-/// outline's offset): a body with continuous bottom corners, and a concave flare on each side
-/// where it meets the top edge (design spec, "Corner geometry"). All its values animate
-/// together.
+/// A body with continuous bottom corners and a concave flare on each side where it meets
+/// the top edge (design spec, "Corner geometry").
 public struct NotchShape: Shape {
     public var outline: NotchOutline
 
@@ -30,8 +28,7 @@ public struct NotchShape: Shape {
         Self.path(outline, topCentre: CGPoint(x: rect.midX, y: rect.minY))
     }
 
-    /// The outline with its top edge centred on `topCentre` moved by its offset, in a y-down
-    /// space.
+    /// Top edge centred on `topCentre`, moved by the outline's offset, in a y-down space.
     static func path(_ outline: NotchOutline, topCentre: CGPoint) -> Path {
         let width = max(0, outline.width)
         let height = max(0, outline.height)

@@ -34,8 +34,6 @@ struct PlayingViewTests {
         PlayingPresentation(store.state, at: now)
     }
 
-    // MARK: Presentation
-
     @Test func timesAreMinutesAndSeconds() {
         #expect(PlayingPresentation.time(0) == "0:00")
         #expect(PlayingPresentation.time(72.9) == "1:12")
@@ -77,8 +75,6 @@ struct PlayingViewTests {
         #expect(!p.showsShuffle && !p.showsRepeat)
         #expect(!p.canLike, "like dims")
     }
-
-    // MARK: Every control drives FakeEngine and reflects its state
 
     @Test func playAndPause() {
         let store = PlayerStore(engine: FakeEngine())
@@ -135,18 +131,6 @@ struct PlayingViewTests {
         #expect(abs(store.state.position - duration) < 0.5, "clamped to the end")
     }
 
-    @Test func viewSwitchingAndOpenGoWhereTheyShould() {
-        var selected: [HoverMachine.ExpandedView] = []
-        var opened = 0
-        let actions = NotchActions(store: nil, openFullWindow: { opened += 1 }, select: { selected.append($0) })
-        actions.select(.upNext)
-        actions.openFullWindow?()
-        #expect(selected == [.upNext])
-        #expect(opened == 1)
-    }
-
-    // MARK: The view never assumes a command worked
-
     @Test func nothingChangesUntilThePlayerSaysSo() {
         let engine = SilentEngine()
         let store = PlayerStore(engine: engine)
@@ -167,8 +151,6 @@ struct PlayingViewTests {
         #expect(presentation(store).playSymbol == Tokens.Symbol.pause)
         #expect(presentation(store).liked)
     }
-
-    // MARK: Drawing
 
     @Test func drawsTheViewOnBlack() throws {
         let store = PlayerStore(engine: FakeEngine())

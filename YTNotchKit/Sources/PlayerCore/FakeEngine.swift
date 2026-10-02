@@ -1,12 +1,8 @@
 import Foundation
 
-/// A player with canned tracks, playlists and a queue, for tests and for running the whole
-/// UI without the web player.
-///
-/// It behaves the way the spikes measured the site: commands change its own model and it
-/// reports the result as events. Previous restarts a track after 3 seconds; shuffle keeps
-/// the current track, and turning it off restores the original order. The `simulate…`
-/// methods force the failure states for tests and the debug menu.
+/// A player with canned data, for tests and for running the UI without the web player. It
+/// behaves as the spikes measured the site: shuffle keeps the current track, and turning it
+/// off restores the original order.
 @MainActor
 public final class FakeEngine: PlayerEngine {
     public struct Playlist: Sendable {
@@ -21,7 +17,6 @@ public final class FakeEngine: PlayerEngine {
 
     public static let bridgeVersion = "fake-1"
 
-    /// Every command received, in order.
     public private(set) var receivedCommands: [PlayerCommand] = []
 
     private let playlists: [Playlist]
@@ -40,8 +35,8 @@ public final class FakeEngine: PlayerEngine {
     private var shuffle = false
     private var repeatMode: RepeatMode = .off
 
-    /// - Parameter runsClock: when true, playback time moves on by itself every half
-    ///   second while playing, so a demo shows real progress. Tests use `advance(by:)`.
+    /// - Parameter runsClock: moves playback on by itself while playing, for demos. Tests
+    ///   call `advance(by:)` instead.
     public init(playlists: [Playlist] = FakeEngine.sample, signedIn: Bool = true, runsClock: Bool = false) {
         self.playlists = playlists
         self.signedIn = signedIn
@@ -96,8 +91,6 @@ public final class FakeEngine: PlayerEngine {
         updateClock()
     }
 
-    /// Moves playback time on, as the real player does while playing. At the end of a track
-    /// it repeats it, goes to the next one, or stops at the end of the queue.
     public func advance(by seconds: TimeInterval) {
         guard isPlaying, let track = currentTrack else { return }
         position += seconds
@@ -126,7 +119,6 @@ public final class FakeEngine: PlayerEngine {
 
     // MARK: Failures, for tests and the debug menu
 
-    /// The page shows its sign-in prompt.
     public func simulateSignedOut() {
         signedIn = false
         report(.signedOut)
@@ -136,10 +128,8 @@ public final class FakeEngine: PlayerEngine {
 
     public func simulateBridgeBroken() { report(.bridgeBroken) }
 
-    /// The bridge can't find these parts of the page.
     public func simulateMissing(_ features: Set<Feature>) { report(.health(missing: features)) }
 
-    /// A page reload: the bridge attaches again and reports everything from scratch.
     public func simulateReload(signedIn: Bool = true) {
         self.signedIn = signedIn
         reportPageLoad()
@@ -208,8 +198,7 @@ public final class FakeEngine: PlayerEngine {
         currentIndex = current.flatMap { track in queue.firstIndex(of: track) } ?? 0
     }
 
-    /// The current track first, then the rest in a fixed scrambled order, so tests are
-    /// repeatable.
+    /// A fixed seed, so tests are repeatable.
     private func shuffled(_ tracks: [Track], keepingFirst first: Track?) -> [Track] {
         var rest = tracks.filter { $0 != first }
         var seed: UInt64 = 0x9E37_79B9_7F4A_7C15
@@ -253,8 +242,7 @@ public final class FakeEngine: PlayerEngine {
 }
 
 extension FakeEngine {
-    /// Eight playlists with invented tracks: enough of both to scroll the notch's lists, and
-    /// a title long enough to truncate.
+    /// Enough playlists and tracks to scroll the notch's lists, and titles long enough to truncate.
     public static let sample: [Playlist] = [
         Playlist(
             item: PlaylistItem(id: "LM", title: "Liked music", isLikedMusic: true),

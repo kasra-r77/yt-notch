@@ -4,8 +4,8 @@ import PlayerCore
 import WebKit
 @testable import WebPlayer
 
-/// A real web view with bridge.js injected at document start, as the app will do it, on the
-/// fixture page instead of the site. It records every message the bridge posts.
+/// A real web view with bridge.js injected at document start, as the app does it, on the
+/// fixture page instead of the site.
 @MainActor
 final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     let webView: WKWebView
@@ -80,10 +80,8 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
         return found!
     }
 
-    /// The newest state the bridge reported.
     var latestSnapshot: PlaybackSnapshot? { events.lazy.reversed().compactMap(\.snapshot).first }
 
-    /// Runs a command through the bridge, the way the web player will.
     @discardableResult
     func send(_ command: PlayerCommand) async throws -> [String: Any] {
         actionMark = messages.count
@@ -95,7 +93,6 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
         return result as? [String: Any] ?? [:]
     }
 
-    /// Evaluates script in the page and returns its value.
     @discardableResult
     func js(_ source: String) async throws -> Any? {
         actionMark = messages.count
@@ -111,7 +108,6 @@ final class BridgeHarness: NSObject, WKScriptMessageHandler, WKNavigationDelegat
     /// else (starting a playlist by its address) is recorded and stopped, so tests never
     /// leave the fixture.
     private(set) var blockedNavigations: [URL] = []
-    /// The path and query of the page loaded; any other address is blocked.
     private var loadedPath = "/"
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {

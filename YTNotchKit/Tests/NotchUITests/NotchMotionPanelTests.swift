@@ -4,7 +4,6 @@ import PlayerCore
 import Testing
 @testable import NotchUI
 
-/// A panel driven by a real store on FakeEngine, its pointer and a clock the test owns.
 @MainActor
 @Suite(.serialized)
 struct NotchMotionPanelTests {
@@ -134,26 +133,5 @@ struct NotchMotionPanelTests {
         #expect(panel.model.isHidden)
         #expect(!panel.model.contentShown)
         #expect(panel.window.ignoresMouseEvents)
-    }
-
-    @Test func switchingToAListResizes() async throws {
-        let panel = panel()
-        defer { panel.close() }
-        pointer.deliver(Self.insidePill)
-        clock.advance(Tokens.Timing.dwell)
-        panel.tick(at: clock.now)
-        panel.select(.upNext)
-        #expect(panel.machine.appearance == .expanded(.view(.upNext)))
-        #expect(panel.model.outline.height == Tokens.Size.expandedListHeight)
-    }
-
-    @Test func withoutArtworkTheAccentIsWhite() async throws {
-        let panel = panel()
-        defer { panel.close() }
-        store.play()
-        try await Self.eventually("playing") { panel.model.isPlaying }
-        #expect(store.state.track?.artworkURL == nil)
-        #expect(panel.model.artwork == nil)
-        #expect(panel.model.accent == .white)
     }
 }

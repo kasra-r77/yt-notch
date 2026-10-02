@@ -2,11 +2,9 @@ import CoreGraphics
 import Foundation
 import SwiftUI
 
-/// The design tokens from `docs/design/tokens.md` (D5), in one place, under the names that
-/// file gives them. Code reads sizes, colours and timings from here, never from literals.
-/// Values the spec marks as read from the screen (notch and menu bar sizes) come from
-/// `ScreenGeometry` instead. The Playing view (N2.5) adds the rest of D5's colours, fonts
-/// and symbols.
+/// The design tokens from `docs/design/tokens.md` (D5), under the names that file gives
+/// them. Code reads sizes, colours and timings from here, never from literals; notch and
+/// menu bar sizes come from `ScreenGeometry` instead.
 public enum Tokens {
     /// Sizes in points.
     public enum Size {
@@ -30,14 +28,11 @@ public enum Tokens {
         public static let shadowOffsetY: CGFloat = 8
         public static let shadowOpacity: Double = 0.3
 
-        /// Wing artwork: `min(wingArtwork, band − wingArtworkClearance)` square.
         public static let wingArtwork: CGFloat = 20
         public static let wingArtworkClearance: CGFloat = 8
-        /// Artwork and bars sit this far in from the wing's outer edge.
         public static let wingInset: CGFloat = 12
         public static let barWidth: CGFloat = 3
         public static let barGap: CGFloat = 2
-        /// The tallest a bar gets: on a band of `barTallBand` or more, and on a smaller one.
         public static let barMaxHeight: CGFloat = 14
         public static let barMaxHeightSmall: CGFloat = 12
         public static let barTallBand: CGFloat = 28
@@ -45,8 +40,6 @@ public enum Tokens {
         public static let barRestHeights: [CGFloat] = [8, 14, 10, 5]
         /// The lowest point of a bar's swing, as a share of the maximum.
         public static let barLow: CGFloat = 0.35
-        /// Peek row: text inset at the sides, space above the line, gap between title and
-        /// artist.
         public static let peekPadding: CGFloat = 16
         public static let peekTextTop: CGFloat = 4
         public static let peekTextGap: CGFloat = 6
@@ -59,7 +52,6 @@ public enum Tokens {
         public static let playIcon: CGFloat = 18
         public static let controlGap: CGFloat = 16
         public static let earGap: CGFloat = 4
-        /// The text column: from x 116, 268 wide.
         public static let textColumnX: CGFloat = 116
         public static let textColumnWidth: CGFloat = 268
         public static let titleY: CGFloat = 48
@@ -74,19 +66,15 @@ public enum Tokens {
         public static let dragKnob: CGFloat = 12
         public static let halo: CGFloat = 4
         public static let toggleDot: CGFloat = 4
-        /// Where the toggle dot sits above the control's bottom edge.
         public static let toggleDotInset: CGFloat = 1
-        /// Click areas: the progress band, and each transport control's column.
         public static let progressHitHeight: CGFloat = 28
         public static let transportHitWidth: CGFloat = 44
-        /// Loading placeholders for the title and the artist.
         public static let skeletonTitle = CGSize(width: 132, height: 10)
         public static let skeletonArtist = CGSize(width: 80, height: 8)
-        /// The title's loading bar sits this far below the title's line.
         public static let skeletonTitleTop: CGFloat = 3
         public static let knobShadowRadius: CGFloat = 1
         public static let knobShadowY: CGFloat = 1
-        // Message states (D4): centred below the band, 40 clear at the sides.
+        // Message states (D4).
         public static let messageIcon: CGFloat = 16
         public static let messageIconGap: CGFloat = 6
         public static let messageTextGap: CGFloat = 2
@@ -94,48 +82,36 @@ public enum Tokens {
         public static let messageInset: CGFloat = 40
         public static let buttonHeight: CGFloat = 28
         public static let buttonPadding: CGFloat = 14
-        // The lists (D3): rows 48 tall and 384 wide, inset 8 from the shape.
+        // The lists (D3).
         public static let row: CGFloat = 48
         public static let rowInset: CGFloat = 8
         public static let rowPadding: CGFloat = 8
         public static let thumbnail: CGFloat = 32
         public static let tileGap: CGFloat = 12
         public static let rowLineGap: CGFloat = 1
-        /// Between the text and what trails it (the bars, the length), and between those two.
         public static let rowTrailingGap: CGFloat = 8
-        /// From the band to the first row, and below the last.
         public static let listTop: CGFloat = 12
         public static let listBottom: CGFloat = 16
         public static let visibleRows = 5
-        /// The playing marker: three bars, resting at these heights and swinging up to 10.
         public static let listBarRestHeights: [CGFloat] = [6, 10, 4]
         public static let listBarMaxHeight: CGFloat = 10
-        /// The saved-list line above the rows, and its icon.
         public static let savedLine: CGFloat = 20
         public static let savedIcon: CGFloat = 12
         public static let savedIconGap: CGFloat = 4
-        /// The clip line once scrolled: a divider and a fade below it; and the bottom fade.
         public static let divider: CGFloat = 0.5
         public static let clipFade: CGFloat = 12
         public static let bottomFade: CGFloat = 16
         public static let emptyIcon: CGFloat = 24
-        /// Between a loading row's two bars.
         public static let skeletonRowGap: CGFloat = 6
-        // The pill on a screen without a notch (D8): its middle, and keeping clear of icons.
-        /// The title and artist, and the gap between them.
+        // The pill on a screen without a notch (D8).
         public static let pillText: CGFloat = 12
         public static let pillTextGap: CGFloat = 6
-        /// Between the middle and the artwork on one side and the bars on the other.
         public static let pillMiddleGap: CGFloat = 10
-        /// A middle narrower than this isn't shown.
         public static let pillMiddleMinimum: CGFloat = 32
-        /// The progress line along the bottom edge.
         public static let pillProgress: CGFloat = 2
-        /// The smallest pill: the artwork and the bars, with no middle.
+        /// The artwork and the bars, with no middle.
         public static let pillMinimum: CGFloat = 2 * wing
-        /// Clear space between the pill and the first menu bar icon to its right.
         public static let pillIconClearance: CGFloat = 8
-        /// A scrolling title's edge fades, at the start and at the end.
         public static let pillFadeStart: CGFloat = 10
         public static let pillFadeEnd: CGFloat = 16
         /// Type sizes, for the fonts below and for measuring text.
@@ -147,7 +123,6 @@ public enum Tokens {
 
     /// Radii in points that aren't the notch's own (those are in `Size`).
     public enum Radius {
-        /// Wing artwork: 5 at 20, 4 at 16.
         public static let wingArtwork: CGFloat = 5
         public static let wingArtworkSmall: CGFloat = 4
         public static let bar: CGFloat = 1.5
@@ -160,8 +135,7 @@ public enum Tokens {
         public static let skeleton: CGFloat = 3
     }
 
-    /// Colours. The surface is black in light and dark mode; everything on it is white at
-    /// an opacity.
+    /// The surface is black in light and dark mode; everything on it is white at an opacity.
     public enum Color {
         public static let surface = SwiftUI.Color.black
         public static let textPrimary = SwiftUI.Color.white
@@ -175,12 +149,9 @@ public enum Tokens {
         public static let rowCurrent = SwiftUI.Color.white.opacity(0.1)
         public static let rowPressed = SwiftUI.Color.white.opacity(0.14)
         public static let placeholder = SwiftUI.Color.white.opacity(0.08)
-        /// The title's loading bar; the artist's uses `placeholder`.
         public static let skeletonStrong = SwiftUI.Color.white.opacity(0.1)
         public static let artworkPlaceholderIcon = SwiftUI.Color.white.opacity(0.3)
-        /// The icon over an empty list.
         public static let emptyIcon = SwiftUI.Color.white.opacity(0.3)
-        /// Behind the pill's progress line.
         public static let pillTrack = SwiftUI.Color.white.opacity(0.15)
         public static let track = SwiftUI.Color.white.opacity(0.2)
         public static let halo = SwiftUI.Color.white.opacity(0.2)
@@ -194,13 +165,10 @@ public enum Tokens {
         public static let knobShadow = SwiftUI.Color.black.opacity(0.4)
     }
 
-    /// Opacities for whole groups.
     public enum Opacity {
-        /// The progress row when seeking is unavailable (D4).
         public static let unavailableProgress: Double = 0.4
     }
 
-    /// Type: SF Pro, the system font.
     public enum Font {
         public static let title = SwiftUI.Font.system(size: Size.titleText, weight: .semibold)
         public static let row = SwiftUI.Font.system(size: Size.titleText, weight: .regular)
@@ -217,7 +185,7 @@ public enum Tokens {
         public static let emptyIcon = SwiftUI.Font.system(size: Size.emptyIcon, weight: .regular)
     }
 
-    /// SF Symbol names for every control (D5, "Icons").
+    /// SF Symbol names (D5, "Icons").
     public enum Symbol {
         public static let tabPlaying = "music.note"
         public static let tabPlaylists = "music.note.list"
@@ -269,31 +237,24 @@ public enum Tokens {
         public static let wingsFadeOut: TimeInterval = 0.1
         public static let wingsFadeIn: TimeInterval = 0.15
         public static let wingsFadeInDelay: TimeInterval = 0.3
-        /// Artwork and bars fade in over the last 0.1 s of the wings growing.
         public static let wingContentFadeIn: TimeInterval = 0.1
         public static let reduceMotionCrossfade: TimeInterval = 0.15
-        /// A notch fades in when it is built, and out and in for full screen.
         public static let fade: TimeInterval = 0.15
-        /// The one spring for opening, closing, peeking and resizing.
         public static let springResponse: Double = 0.35
         public static let springDamping: Double = 0.8
         /// One swing of each bar, low to high, in seconds; the phases are offset by
         /// `barPhases` of a full cycle.
         public static let barSwings: [TimeInterval] = [0.55, 0.8, 0.65, 0.72]
         public static let barPhases: [Double] = [0, 0.35, 0.7, 0.15]
-        /// How often the elapsed time redraws while playing.
         public static let progressRefresh: TimeInterval = 0.25
-        /// How often the pill's progress line moves on while playing.
         public static let pillProgressRefresh: TimeInterval = 0.5
-        /// A long title in the pill: points per second, the rest at the start, the rest at the end.
+        /// Points per second.
         public static let pillScrollSpeed: Double = 30
         public static let pillScrollRest: TimeInterval = 2
         public static let pillScrollEndRest: TimeInterval = 1
-        /// How often the menu bar icons are looked at, on screens with a pill.
         public static let menuBarIconsRefresh: TimeInterval = 2
     }
 
-    /// Animations built from the timings above.
     public enum Motion {
         public static let spring = Animation.spring(response: Timing.springResponse, dampingFraction: Timing.springDamping)
         public static let wingsIn = Animation.timingCurve(0.2, 0, 0, 1, duration: Timing.wingsIn)

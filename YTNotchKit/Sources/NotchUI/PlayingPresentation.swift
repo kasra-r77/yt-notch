@@ -7,11 +7,10 @@ struct PlayingPresentation: Equatable {
     var hasTrack: Bool
     var title: String
     var artist: String
-    /// The help tag over the title and artist: both in full.
     var help: String
     var elapsed: String
     var total: String
-    /// How far through the track, 0 to 1.
+    /// 0 to 1.
     var progress: Double
     var duration: TimeInterval?
     var isPlaying: Bool
@@ -88,12 +87,10 @@ struct PlayingPresentation: Equatable {
 
     static let unknownTime = "–:––"
 
-    /// The help tag for a control: its name, or that it can't be used right now (D4).
     static func help(_ label: String, enabled: Bool) -> String {
         enabled ? label : "\(label) isn't available right now"
     }
 
-    /// "1:12", or "1:02:03" past an hour.
     static func time(_ seconds: TimeInterval) -> String {
         let whole = max(0, Int(seconds.rounded(.down)))
         let hours = whole / 3600
@@ -105,20 +102,15 @@ struct PlayingPresentation: Equatable {
     }
 }
 
-/// What the notch's controls do: the store's intents, plus the two things only the app can
-/// do (open the full window) or only the panel can (switch views).
 @MainActor
 struct NotchActions {
     let store: PlayerStore?
     var openFullWindow: (@MainActor () -> Void)?
-    /// Loads the page again now (the web player's retry).
     var retry: (@MainActor () -> Void)?
     var select: @MainActor (HoverMachine.ExpandedView) -> Void = { _ in }
-    /// Closes the notch at once, for controls that take the user elsewhere.
     var dismiss: @MainActor () -> Void = {}
 
-    /// Open, Sign In and Open Full Window: show the full window and close the notch. (W3.3
-    /// opens it on the sign-in page when signed out.)
+    /// Sign In too: the full window opens on the sign-in page when signed out.
     func open() {
         openFullWindow?()
         dismiss()
@@ -138,8 +130,7 @@ struct NotchActions {
         }
     }
 
-    /// A list row's click: start the playlist, or jump to the track. The list stays put;
-    /// the marker moves when the player reports the change.
+    /// The list stays put; the marker moves when the player reports the change.
     func play(_ action: ListRow.Action) {
         switch action {
         case let .playPlaylist(id): store?.playPlaylist(id: id)
@@ -154,7 +145,6 @@ struct NotchActions {
     func toggleShuffle() { store?.toggleShuffle() }
     func cycleRepeat() { store?.cycleRepeat() }
 
-    /// Seeks to a point given as a share of the track, 0 to 1.
     func seek(toFraction fraction: Double) {
         guard let store, let duration = store.state.track?.duration else { return }
         store.seek(to: min(1, max(0, fraction)) * duration)

@@ -1,13 +1,7 @@
 import Foundation
 
-/// The only writer of player state.
-///
-/// The store turns user intents into commands for the engine and the engine's events into
-/// state. It never changes state when it sends a command: the UI shows only what the player
-/// reports, so the notch cannot drift out of step with the real player.
-///
-/// It also decides health. Commands are dropped while health isn't OK, while the feature
-/// they need is missing, or when they can't apply (no next track, an unknown queue index).
+/// The only writer of player state. Sending a command never changes state: the UI shows only
+/// what the player reports, so it cannot drift out of step with the real player.
 @MainActor
 public final class PlayerStore {
     public let state = PlayerState()
@@ -15,14 +9,12 @@ public final class PlayerStore {
     private let engine: PlayerEngine
     private let playlistCache: PlaylistCache?
     private let now: () -> Date
-    /// Pictures in the order they arrived, oldest first, for dropping old ones.
     private var artworkOrder: [URL] = []
 
-    /// How many pictures not in use are kept, besides those in use.
     static let artworkKept = 64
 
-    /// - Parameter playlistCache: remembers the playlist list across launches, so the
-    ///   Playlists view works before the page loads and while the sidebar can't be read.
+    /// - Parameter playlistCache: lets the Playlists view work before the page loads and while
+    ///   the sidebar can't be read.
     public init(engine: PlayerEngine, playlistCache: PlaylistCache? = nil, now: @escaping () -> Date = Date.init) {
         self.engine = engine
         self.playlistCache = playlistCache
@@ -36,8 +28,6 @@ public final class PlayerStore {
         }
     }
 
-    // MARK: Intents
-
     public func play() { send(.play, needs: .playPause) }
 
     public func pause() { send(.pause, needs: .playPause) }
@@ -48,7 +38,6 @@ public final class PlayerStore {
 
     public func previous() { send(.previous, needs: .previous) }
 
-    /// Seeks within the current track; the position is clamped to the track.
     public func seek(to seconds: TimeInterval) {
         guard let duration = state.track?.duration else { return }
         send(.seek(to: min(max(0, seconds), duration)), needs: .seek)
@@ -58,8 +47,8 @@ public final class PlayerStore {
 
     public func toggleLike() { setLiked(!state.liked) }
 
-    /// Starts a playlist from the list. Starting one goes by its web address, so it still
-    /// works from a remembered list while the sidebar can't be read.
+    /// Needs no feature: it goes by the playlist's web address, so it still works from a
+    /// remembered list while the sidebar can't be read.
     public func playPlaylist(id: String) {
         guard state.playlists.contains(where: { $0.id == id }) else { return }
         send(.playPlaylist(id: id), needs: nil)
@@ -76,7 +65,6 @@ public final class PlayerStore {
 
     public func setRepeat(_ mode: RepeatMode) { send(.setRepeat(mode), needs: .repeatMode) }
 
-    /// Moves repeat to the next mode, as the repeat button does: off, all, one, off.
     public func cycleRepeat() { setRepeat(state.repeatMode.next) }
 
     private func send(_ command: PlayerCommand, needs feature: Feature?) {
@@ -87,8 +75,6 @@ public final class PlayerStore {
         }
         engine.send(command)
     }
-
-    // MARK: Events
 
     func apply(_ event: PlayerEvent) {
         switch event {
@@ -134,7 +120,6 @@ public final class PlayerStore {
         }
     }
 
-    /// Drops the oldest pictures beyond `artworkKept`, never one in use.
     private func trimmed(_ artwork: [URL: Data]) -> [URL: Data] {
         var excess = artworkOrder.count - Self.artworkKept
         guard excess > 0 else { return artwork }
@@ -149,8 +134,7 @@ public final class PlayerStore {
         return artwork
     }
 
-    /// Changes the status, except that a broken bridge stays broken until the page
-    /// reports ready again.
+    /// A broken bridge stays broken until the page reports ready again.
     private func setStatus(_ status: Health.Status) {
         guard state.health.status != .bridgeBroken else { return }
         set(\.health.status, status)

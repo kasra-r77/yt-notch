@@ -1,7 +1,6 @@
 import Testing
 @testable import PlayerCore
 
-/// Every intent sends its command, and is dropped when it can't apply.
 @MainActor
 struct StoreCommandTests {
     enum Intent: CaseIterable, CustomTestStringConvertible {

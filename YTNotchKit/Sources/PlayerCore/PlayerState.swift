@@ -1,14 +1,13 @@
 import Foundation
 import Observation
 
-/// Everything the notch, Control Center and the menu show. Other modules can only read it:
-/// its setters are internal to PlayerCore, and PlayerStore is the only writer.
+/// Read-only outside PlayerCore; PlayerStore is its only writer.
 @MainActor
 @Observable
 public final class PlayerState {
     public internal(set) var track: Track?
     public internal(set) var isPlaying = false
-    /// Seconds into the track at the last report; use `elapsed(at:)` to show progress.
+    /// As of the last report; show progress with `elapsed(at:)`.
     public internal(set) var position: TimeInterval = 0
     public internal(set) var positionReportedAt: Date = .distantPast
     public internal(set) var canNext = false
@@ -16,26 +15,19 @@ public final class PlayerState {
     public internal(set) var liked = false
     public internal(set) var shuffle = false
     public internal(set) var repeatMode: RepeatMode = .off
-    /// The last playlist list the bridge reported. It is kept when the bridge later reports
-    /// playlists as missing, so the list stays usable.
+    /// Kept when the bridge later reports playlists missing, so the list stays usable.
     public internal(set) var playlists: [PlaylistItem] = []
-    /// True while `playlists` is the list remembered from an earlier launch and the page
-    /// hasn't read the sidebar yet.
+    /// `playlists` came from an earlier launch and the page hasn't read the sidebar yet.
     public internal(set) var playlistsAreRemembered = false
-    /// The library playlist playing now, if the page says.
     public internal(set) var playlistID: String?
     public internal(set) var queue: [QueueItem] = []
-    /// The pictures the page handed over, by address: the track's artwork and the queue's
-    /// thumbnails while they are in use, and a few recent ones besides. Nothing else in the
-    /// app downloads pictures.
+    /// Pictures the page handed over, by address. Nothing in the app downloads pictures itself.
     public internal(set) var artwork: [URL: Data] = [:]
     public internal(set) var health = Health()
     public internal(set) var bridgeVersion: String?
 
     public init() {}
 
-    /// The position now: it keeps moving from the last report while playing, and never
-    /// passes the duration.
     public func elapsed(at now: Date) -> TimeInterval {
         guard isPlaying else { return position }
         let moved = position + max(0, now.timeIntervalSince(positionReportedAt))
@@ -43,7 +35,6 @@ public final class PlayerState {
         return moved
     }
 
-    /// Whether a feature's controls work right now. Unavailable controls are dimmed.
     public func isAvailable(_ feature: Feature) -> Bool {
         guard health.status == .ok, !health.missing.contains(feature) else { return false }
         switch feature {
@@ -55,15 +46,11 @@ public final class PlayerState {
         }
     }
 
-    /// The Playlists tab shows while there is a list, even a remembered one.
     public var showsPlaylistsView: Bool { !playlists.isEmpty }
 
-    /// The list shown may not match the site: it is remembered from an earlier launch, or
-    /// the sidebar can't be read now.
     public var playlistsMayBeOutOfDate: Bool {
         !playlists.isEmpty && (playlistsAreRemembered || health.missing.contains(.playlists))
     }
 
-    /// The Up next tab hides as soon as the queue can't be read.
     public var showsQueueView: Bool { !health.missing.contains(.queue) && !queue.isEmpty }
 }

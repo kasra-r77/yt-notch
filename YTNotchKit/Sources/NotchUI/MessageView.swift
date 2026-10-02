@@ -9,18 +9,15 @@ public enum NotchMessage: String, CaseIterable, Sendable {
     case loading
 }
 
-/// What a debug menu can force on the notch, over what the player reports (N2.6, N2.7), so
-/// each state can be looked at without breaking anything.
+/// What the debug menu can force on the notch over what the player reports, so each state
+/// can be looked at without breaking anything.
 public enum NotchForcedState: Equatable, Sendable {
     case message(NotchMessage)
-    /// The page plays but these parts can't be read.
     case missing(Set<Feature>)
-    /// Both lists show this state, and both tabs show.
     case lists(ListState)
 
     public enum ListState: Equatable, Sendable {
         case loading
-        /// Playlists shows its list as remembered, under the saved-list line.
         case saved
         case empty
     }
@@ -71,8 +68,7 @@ struct MessagePresentation: Equatable {
         }
     }
 
-    /// The message the notch shows for this state, or nil when it can play. A page where
-    /// every part is missing counts as broken.
+    /// Nil when the notch can play. A page where every part is missing counts as broken.
     @MainActor
     static func kind(for state: PlayerState, forced: NotchForcedState? = nil) -> NotchMessage? {
         if case let .message(kind) = forced { return kind }
@@ -85,7 +81,6 @@ struct MessagePresentation: Equatable {
         }
     }
 
-    /// The parts that can't be read, with any forced ones added.
     @MainActor
     static func missing(in state: PlayerState, forced: NotchForcedState?) -> Set<Feature> {
         if case let .missing(features) = forced { return state.health.missing.union(features) }
@@ -93,8 +88,7 @@ struct MessagePresentation: Equatable {
     }
 }
 
-/// One message and at most one button, centred below the band in the 400 × 148 frame. The
-/// switcher and both ears are empty: none of the views work in these states.
+/// The switcher and both ears are empty: none of the views work in these states.
 struct MessageView: View {
     let presentation: MessagePresentation
     let actions: NotchActions
@@ -138,8 +132,6 @@ struct MessageView: View {
     }
 }
 
-/// The message state's one button: white with black text, 28 tall, radius 14. Hover white
-/// 85%, pressed white 70%.
 struct MessageButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         MessageButtonBody(configuration: configuration)

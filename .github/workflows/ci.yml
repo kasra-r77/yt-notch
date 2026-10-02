@@ -1,6 +1,5 @@
 name: CI
 
-# Builds the app and runs every test on each pull request and on main.
 # The job name "Build and test" is the required status check for merging.
 
 on:

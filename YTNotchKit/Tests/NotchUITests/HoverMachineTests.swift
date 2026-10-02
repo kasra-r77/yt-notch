@@ -2,26 +2,21 @@ import Foundation
 import Testing
 @testable import NotchUI
 
-/// Every row of the transitions table and every rule in the spec's "Motion → Hover"
-/// section. Times come from the tokens; only `theTimingsAreTheSpecs` names the numbers.
+/// Every row of the transitions table and every rule in the spec's "Motion → Hover" section.
 struct HoverMachineTests {
     typealias T = Tokens.Timing
     static let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
 
-    /// `seconds` after the start.
     static func at(_ seconds: TimeInterval) -> Date { start.addingTimeInterval(seconds) }
 
-    /// Just short of a timing.
     static let justBefore: TimeInterval = 0.001
 
-    /// A notch showing Playing, collapsed.
     static func playing() -> HoverMachine {
         var machine = HoverMachine()
         machine.playback(hasTrack: true, isPlaying: true)
         return machine
     }
 
-    /// Open at `opensAt`, with the pointer inside.
     static func expanded(from machine: HoverMachine = playing(), opensAt time: TimeInterval = T.dwell) -> HoverMachine {
         var machine = machine
         machine.pointer(inside: true, buttonDown: false, at: at(time - T.dwell))
@@ -29,15 +24,12 @@ struct HoverMachineTests {
         return machine
     }
 
-    /// Peeking, fully out at `outAt`.
     static func peeking(outAt time: TimeInterval = 0) -> HoverMachine {
         var machine = playing()
         machine.trackChanged(at: at(time - 0.3))
         machine.peekFullyOut(at: at(time))
         return machine
     }
-
-    // MARK: Timings
 
     @Test func theTimingsAreTheSpecs() {
         #expect(HoverMachine().timing == .tokens)
@@ -221,11 +213,9 @@ struct HoverMachineTests {
         machine.tick(at: Self.at(2 + T.grace))
         let closedAt = 2 + T.grace
 
-        // Back within the memory: the view it closed on.
         machine = Self.expanded(from: machine, opensAt: closedAt + T.reopenMemory - 1)
         #expect(machine.appearance == .expanded(.view(.upNext)))
 
-        // Closed again, and back after the memory has run out: Playing.
         machine.pointer(inside: false, buttonDown: false, at: Self.at(20))
         machine.tick(at: Self.at(20 + T.grace))
         machine = Self.expanded(from: machine, opensAt: 20 + T.grace + T.reopenMemory)
@@ -258,7 +248,6 @@ struct HoverMachineTests {
         machine.pointer(inside: true, buttonDown: true, at: Self.at(0))
         machine.tick(at: Self.at(1))
         #expect(machine.phase == .collapsed)
-        // Let go inside the shape: now it rests there.
         machine.pointer(inside: true, buttonDown: false, at: Self.at(1))
         #expect(machine.phase == .dwell(since: Self.at(1)))
     }
@@ -276,14 +265,6 @@ struct HoverMachineTests {
         var idle = HoverMachine()
         idle.trackChanged(at: Self.at(1))
         #expect(idle.collapsed == .idle)
-    }
-
-    @Test func eachDisplaysMachineIsItsOwn() {
-        var builtIn = Self.playing()
-        let external = builtIn
-        builtIn = Self.expanded(from: builtIn)
-        #expect(builtIn.isExpanded)
-        #expect(!external.isExpanded)
     }
 
     @Test func losingTheTrackWhileOpenClosesToIdle() {

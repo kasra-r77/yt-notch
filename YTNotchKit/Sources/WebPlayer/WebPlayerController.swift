@@ -4,26 +4,12 @@ import OSLog
 import PlayerCore
 import WebKit
 
-/// The one web view for the app's lifetime, playing the site in a hidden window.
-///
-/// It injects `bridge.js`, turns the bridge's messages into events and commands into calls
-/// into the page, and implements `PlayerEngine`. It never reads the page itself; that is
-/// the bridge's job. The web view lives in a real window that stays ordered in but sits far
-/// off-screen, which keeps playback going (spike report, S0.2).
-///
-/// Brought on screen, its window is the full window (`FullWindow`) for signing in and
-/// browsing. Only the site's own pages talk to the app: the bridge also runs on the pages a
-/// sign-in passes through, and what it posts there is dropped.
-///
-/// It also recovers, as the plan's failure table says: it retries a page that failed to
-/// load, reloads after a web content crash without starting playback, re-reads everything
-/// after a wake from sleep, and when playback goes quiet it re-injects the bridge, then
-/// reloads once, then reports the bridge broken.
+/// The one web view for the app's lifetime. It never reads the page itself; that is the
+/// bridge's job. Recovery follows the plan's failure table.
 @MainActor
 public final class WebPlayerController: NSObject, PlayerEngine {
     @MainActor
     public struct Configuration {
-        /// What to load: the site, or a page for tests.
         public enum Page {
             case url(URL)
             case html(String, baseURL: URL)
@@ -34,22 +20,19 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         public var dataStore: WKWebsiteDataStore = .default()
         public var userAgent: String? = WebPlayerController.safariUserAgent()
         public var timing = RecoveryTiming()
-        /// Says when the network comes back, to retry at once. Nil leaves it to the timer.
+        /// Nil leaves retries to the timer.
         public var networkMonitor: (any NetworkMonitor)? = PathNetworkMonitor()
-        /// Links the user follows stay in the window only on these hosts: the site and the
-        /// pages its sign-in uses. Everything else opens in the default browser.
+        /// The site and its sign-in pages. Links the user follows elsewhere open in the browser.
         public var windowHosts: Set<String> = [
             "music.youtube.com", "accounts.google.com", "accounts.youtube.com", "consent.youtube.com", "consent.google.com",
         ]
         /// Where the full window keeps its frame and whether the first run is over.
         public var defaults: UserDefaults = .standard
-        /// Opens a link outside the window.
         public var openInBrowser: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
 
         public init() {}
     }
 
-    /// How far recovery from a quiet bridge has got.
     enum RecoveryStage: Equatable {
         case none
         case reinjected
@@ -68,11 +51,10 @@ public final class WebPlayerController: NSObject, PlayerEngine {
     private var onEvent: (@MainActor (PlayerEvent) -> Void)?
     private let log = Logger(subsystem: "io.github.kasra-r77.ytnotch", category: "WebPlayer")
 
-    // Recovery. The counters are for tests and the log.
+    // The counters are for tests and the log.
     private(set) var recoveryStage = RecoveryStage.none
     private(set) var loadAttempts = 0
     private(set) var stalls = 0
-    /// How many times a page of the site has said its bridge is ready: once per load.
     private(set) var readyReports = 0
     private var isOffline = false
     private var retryAttempt = 0
@@ -87,12 +69,10 @@ public final class WebPlayerController: NSObject, PlayerEngine {
 
     /// For tests: drops every message from the bridge, as if it had gone quiet.
     var ignoresBridgeMessages = false
-    /// Messages dropped because they came from a page other than the site.
     private(set) var foreignMessages = 0
 
-    /// Whether the site says the user is signed in; nil until it has said.
+    /// Nil until the site has said.
     private(set) var isSignedIn: Bool?
-    /// The window asked for the site's sign-in before the page could say it was needed.
     private var signInPending = false
 
     public init(configuration: Configuration = Configuration()) {
@@ -149,7 +129,6 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         run(Bridge.arguments(for: command))
     }
 
-    /// Runs a bridge command in the page and logs it if it fails.
     private func run(_ arguments: [String: Any]) {
         // The name only: values such as playlist IDs come from the user's account.
         let name = arguments["name"] as? String ?? "?"
@@ -169,21 +148,18 @@ public final class WebPlayerController: NSObject, PlayerEngine {
 
     public var isWindowVisible: Bool { fullWindow.isVisible }
 
-    /// Brings the full window on screen and the app forward. With `signIn`, it also opens
-    /// the site's own sign-in, which goes on to Google's pages, as soon as the page says it
-    /// is signed out.
+    /// With `signIn`, also opens the site's sign-in as soon as the page says it is signed out.
     public func showWindow(signIn: Bool = false) {
         fullWindow.show()
         if signIn { requestSignIn() }
     }
 
-    /// Moves the full window back off-screen. The page and the music go on.
+    /// The page and the music go on.
     public func hideWindow() {
         fullWindow.hide()
     }
 
-    /// On the very first launch, opens the full window on the site's sign-in with the
-    /// first-run bar; later launches open nothing. Says whether it opened the window.
+    /// Opens the window on the site's sign-in on the first launch only. Returns whether it did.
     @discardableResult
     public func openOnFirstLaunch() -> Bool {
         guard !fullWindow.hasFinishedFirstRun else { return false }
@@ -206,8 +182,6 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         run(Bridge.signInArguments)
     }
 
-    /// What the site says about signing in: the first-run bar follows it, and a sign-in the
-    /// window asked for early goes ahead.
     private func signedIn(_ signedIn: Bool) {
         isSignedIn = signedIn
         fullWindow.firstRunBar.stage = signedIn ? .signedIn : .signIn
@@ -231,8 +205,7 @@ public final class WebPlayerController: NSObject, PlayerEngine {
     fileprivate func receive(_ message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, !ignoresBridgeMessages else { return }
         guard message.frameInfo.securityOrigin.host == siteHost else {
-            // A sign-in page, or anywhere else the window went: the bridge runs there too,
-            // but nothing from those pages reaches the app.
+            // The bridge runs on sign-in pages too, but nothing from them reaches the app.
             foreignMessages += 1
             return
         }
@@ -244,7 +217,6 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         onEvent?(event)
     }
 
-    /// What recovery learns from the bridge's messages.
     private func observe(_ event: PlayerEvent) {
         let now = Date()
         switch event {
@@ -282,7 +254,6 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         }
     }
 
-    /// The bridge is talking, so whatever recovery was under way worked.
     private func pageIsBack() {
         if isOffline { log.notice("the page loaded; back online") }
         isOffline = false
@@ -294,7 +265,6 @@ public final class WebPlayerController: NSObject, PlayerEngine {
 
     // MARK: Recovery
 
-    /// Loads the page again now: for a Retry button, and when the network returns.
     public func retry() {
         retryTask?.cancel()
         reloadCurrentPage()
@@ -304,8 +274,7 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         handleWake()
     }
 
-    /// After a wake from sleep the page may have changed, so the bridge reports everything
-    /// again. A page that had failed to load is retried instead.
+    /// After a wake the page may have changed, so the bridge reports everything again.
     func handleWake() {
         log.notice("woke from sleep")
         lastHeardAt = Date()
@@ -331,9 +300,8 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         }
     }
 
-    /// Reloads the page where it is (a playlist, say), or loads the start page if none
-    /// ever loaded. A test page is loaded again from its string, since its address is
-    /// made up.
+    /// Reloads where the page is (a playlist, say). A test page is loaded again from its
+    /// string, since its address is made up.
     private func reloadCurrentPage() {
         guard case .url = page, webView.url != nil else { return load(page) }
         loadAttempts += 1
@@ -417,8 +385,7 @@ public final class WebPlayerController: NSObject, PlayerEngine {
         }
     }
 
-    /// Runs the bridge script again (it returns at once if the bridge is still attached),
-    /// then asks it to report everything.
+    /// The script returns at once if the bridge is still attached.
     private func reinjectBridge() {
         Task {
             _ = try? await webView.callAsyncJavaScript(Bridge.script, contentWorld: .page)
@@ -444,7 +411,6 @@ public final class WebPlayerController: NSObject, PlayerEngine {
 }
 
 extension WebPlayerController: WKNavigationDelegate, WKUIDelegate {
-    /// Links the user follows out of the site and its sign-in open in the default browser.
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let url = navigationAction.request.url,
               navigationAction.targetFrame?.isMainFrame ?? true,
@@ -476,8 +442,7 @@ extension WebPlayerController: WKNavigationDelegate, WKUIDelegate {
         reloadCurrentPage()
     }
 
-    /// Pages that open a new window (sign-in links, target=_blank) load in this one instead,
-    /// unless they lead out of the site, which goes to the browser.
+    /// New windows (sign-in links, target=_blank) load in this one unless they leave the site.
     public func webView(
         _ webView: WKWebView,
         createWebViewWith configuration: WKWebViewConfiguration,
@@ -494,10 +459,9 @@ extension WebPlayerController: WKNavigationDelegate, WKUIDelegate {
     }
 }
 
-/// How long recovery waits. The defaults are the plan's; tests shorten them.
+/// The defaults are the plan's; tests shorten them.
 public struct RecoveryTiming: Sendable {
-    /// The waits before the retries after a failed load. The last one repeats for as long
-    /// as the page can't load.
+    /// The last one repeats for as long as the page can't load.
     public var retryDelays: [TimeInterval] = [2, 5, 15, 60]
     /// How long playback may go without a state message before recovery starts, and how
     /// long re-injecting gets before the page is reloaded.
@@ -517,13 +481,11 @@ public struct RecoveryTiming: Sendable {
     }
 }
 
-/// Says when the network comes back.
 @MainActor
 public protocol NetworkMonitor: AnyObject {
     func start(onReachable: @escaping @MainActor () -> Void)
 }
 
-/// Watches the network with the system's path monitor.
 @MainActor
 public final class PathNetworkMonitor: NetworkMonitor {
     private let monitor = NWPathMonitor()

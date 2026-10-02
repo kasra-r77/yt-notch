@@ -1,13 +1,10 @@
 import AppKit
 import WebKit
 
-/// The full window (design spec D7): the one web view brought on screen for signing in,
-/// browsing and anything the notch doesn't do. Our chrome is only the title bar, with Back,
-/// Forward and Reload, and on first run a bar under it; everything else is the site.
+/// The full window (design spec D7): the one web view, brought on screen.
 ///
 /// Hidden, the window stays ordered in but far off-screen, which keeps the page playing
-/// (spike report, S0.2). Closing it only hides it. Its size and position on screen are
-/// remembered.
+/// (spike report, S0.2). Closing it only hides it.
 @MainActor
 final class FullWindow: NSObject {
     static let size = NSSize(width: 1100, height: 760)
@@ -18,7 +15,7 @@ final class FullWindow: NSObject {
     let window: HostWindow
     let webView: WKWebView
     let firstRunBar = FirstRunBar()
-    /// What Reload and ⌘R do: the player's own reload, which knows its test pages.
+    /// The player's own reload, not the web view's: it knows its test pages.
     var reload: () -> Void = {}
 
     private let defaults: UserDefaults
@@ -75,13 +72,11 @@ final class FullWindow: NSObject {
         firstRunBar.isHidden = true
         firstRunBar.close = { [weak self] in self?.hide() }
 
-        // Ordered in but off-screen: invisible, yet the page keeps playing. AppKit puts a new
-        // window on screen whatever frame it is given, so move it off afterwards.
+        // AppKit puts a new window on screen whatever its frame, so move it off afterwards.
         window.setFrame(hiddenFrame, display: false)
         window.orderFrontRegardless()
     }
 
-    /// The bar on top, then the web view, which fills the rest.
     private func content() -> NSView {
         let container = NSView()
         for view in [firstRunBar, webView] as [NSView] {
@@ -109,8 +104,7 @@ final class FullWindow: NSObject {
         window.frame.intersects(NSScreen.screens.map(\.frame).reduce(.null) { $0.union($1) })
     }
 
-    /// Brings the window on screen where it was last, or at 1100 × 760 centred on the screen
-    /// with the pointer, and activates the app so the page can take typing.
+    /// Also activates the app, so the page can take typing.
     func show() {
         if window.isMiniaturized { window.deminiaturize(nil) }
         if !isVisible {
@@ -121,8 +115,7 @@ final class FullWindow: NSObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    /// Moves the window back off-screen; the page and the music go on. Closing the
-    /// first-run window ends the first run for good.
+    /// Closing the first-run window ends the first run for good.
     func hide() {
         if isVisible { saveFrame() }
         if !firstRunBar.isHidden { finishFirstRun() }
@@ -143,7 +136,6 @@ final class FullWindow: NSObject {
         return NSRect(x: (area.midX - width / 2).rounded(), y: (area.midY - height / 2).rounded(), width: width, height: height)
     }
 
-    /// The last frame on screen, if it is still mostly on a screen.
     private func savedFrame() -> NSRect? {
         guard let text = defaults.string(forKey: Self.frameKey) else { return nil }
         let frame = NSRectFromString(text)
@@ -184,7 +176,6 @@ final class FullWindow: NSObject {
 
     func item(_ identifier: NSToolbarItem.Identifier) -> NSToolbarItem? { items[identifier] }
 
-    /// Back and Forward dim when there is nowhere to go.
     private func updateItems() {
         items[Self.back]?.isEnabled = webView.canGoBack
         items[Self.forward]?.isEnabled = webView.canGoForward
@@ -227,7 +218,6 @@ extension FullWindow: NSToolbarDelegate {
 }
 
 extension FullWindow: NSWindowDelegate {
-    /// Closing the window hides it; the web view and the music keep going.
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         hide()
         return false
@@ -242,7 +232,6 @@ extension FullWindow: NSWindowDelegate {
     }
 }
 
-/// The bar under the title bar on first run: what to do, then that it is done.
 final class FirstRunBar: NSView {
     enum Stage: Equatable {
         case signIn
@@ -257,14 +246,12 @@ final class FirstRunBar: NSView {
         didSet { update() }
     }
 
-    /// What Close Window does.
     var close: () -> Void = {}
 
     let icon = NSImageView()
     let label = NSTextField(labelWithString: "")
     let closeButton = NSButton(title: "Close Window", target: nil, action: nil)
 
-    /// #F3F4F6, and a dark grey in dark mode.
     private static let background = NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
             ? NSColor(srgbRed: 0.17, green: 0.17, blue: 0.18, alpha: 1)
@@ -324,9 +311,8 @@ final class FirstRunBar: NSView {
 
 /// Which links leave the window for the default browser (D7, "Links out").
 enum LinkPolicy {
-    /// A link the user follows, or a new window a page opens, to anywhere but the site and
-    /// its sign-in pages goes to the browser. Redirects and form posts stay in the window, so
-    /// a sign-in that passes through other addresses (a work account's own sign-in) works.
+    /// Redirects and form posts stay in the window, so a sign-in that passes through other
+    /// addresses (a work account's own sign-in) works.
     static func opensInBrowser(_ url: URL, followedLink: Bool, allowedHosts: Set<String>) -> Bool {
         guard followedLink, let scheme = url.scheme?.lowercased() else { return false }
         switch scheme {
@@ -343,8 +329,7 @@ enum LinkPolicy {
 }
 
 /// A window macOS never pulls back on screen, so it can sit far off-screen while ordered in.
-/// The app has no menu bar of its own, so the window handles ⌘W, ⌘[, ⌘] and ⌘R itself, and
-/// passes editing keys (copy, paste and so on) to the page when nothing else took them.
+/// The app has no menu bar of its own, so the window handles its shortcuts and editing keys.
 final class HostWindow: NSWindow {
     var keyCommands: [String: () -> Void] = [:]
 

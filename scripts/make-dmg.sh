@@ -1,14 +1,9 @@
 #!/bin/bash
-# Builds YT Notch for release and packs it into a disk image in dist/, laid out as D6 has it:
-# a 660 × 400 window on docs/design/brand/dmg-background, the app at (165, 180) and the
-# Applications link at (495, 180), both at 128. That layout needs create-dmg
-# (`brew install create-dmg`); without it the image is plain, with the same two items.
+# Builds a release disk image in dist/. Its layout is design spec D6's and needs create-dmg;
+# without it the image is plain. The app is signed ad hoc and isn't notarised
+# (docs/decisions.md).
 #
-# The app is signed ad hoc, not with a Developer ID, and isn't notarised (see
-# docs/decisions.md): macOS asks once before opening it, as the README explains.
-#
-# EXPECTED_VERSION, when set (the release workflow sets it from the tag), must match the
-# app's version.
+# EXPECTED_VERSION, when set, must match the app's version.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

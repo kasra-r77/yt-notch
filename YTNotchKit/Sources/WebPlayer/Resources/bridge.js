@@ -1,18 +1,11 @@
-// YT Notch bridge.
-//
-// Injected at document start into the main frame of music.youtube.com. It reads what is
-// playing and presses the site's own controls, and talks to the app through the `ytNotch`
-// message handler (page to app) and `window.__ytNotch.command(name, value)` (app to page).
-// `window.__ytNotch.refresh()` makes it report everything again, for recovery and wake.
-// The contract is in the plan, section "Web bridge contract".
-//
-// The app downloads nothing itself: the pictures it shows (the track's artwork, the queue's
-// thumbnails) come from here, read through the page.
+// YT Notch bridge, injected at document start into the main frame of music.youtube.com.
+// Page to app: the `ytNotch` message handler. App to page: `window.__ytNotch`. The contract
+// is in the plan, section "Web bridge contract".
 //
 // All Google-specific knowledge in the app lives in this file. Plain JavaScript, no
 // dependencies, shipped inside the app and never downloaded. It never throws: a lookup that
-// fails is reported in a `health` message. It keeps no state the app depends on, and after
-// a page reload rebuilds everything from the page.
+// fails is reported in a `health` message. It keeps no state the app depends on. The app
+// downloads nothing itself: the pictures it shows are read through the page here.
 (() => {
   'use strict';
 
@@ -29,7 +22,7 @@
   const PAGE = {
     // The page's own config says whether the user is signed in; it is set early in <head>.
     signedInConfigKey: 'LOGGED_IN',
-    // The like button in the player's action bar. `aria-pressed` is the liked state.
+    // In the player's action bar. `aria-pressed` is the liked state.
     likeButton: 'like-button-view-model button[aria-pressed]',
     // In the top bar only when signed in.
     accountButton: 'ytmusic-settings-button',
@@ -57,10 +50,10 @@
     queueItemTitle: '.song-title',
     queueItemArtist: '.byline',
     queueItemPlayButton: 'ytmusic-play-button-renderer',
-    // Each item's thumbnail and its length as text ("3:45"). The item's `img` loads only once
-    // it scrolls into view in the site's queue panel; until then its src is a placeholder.
-    // So the thumbnail comes first from the item's data, a property like the sidebar's:
-    // `data.thumbnail.thumbnails`, the same picture at several sizes (checked 2026-10-02).
+    // The item's `img` loads only once it scrolls into view in the site's queue panel; until
+    // then its src is a placeholder. So the thumbnail comes first from the item's data, a
+    // property like the sidebar's: `data.thumbnail.thumbnails`, the same picture at several
+    // sizes (checked 2026-10-02).
     queueItemThumbnail: 'img',
     queueItemDuration: '.duration',
 
@@ -76,7 +69,6 @@
   const ARTWORK_MIN_PX = 192;
   // Up next shows thumbnails 32 points square: 64 pixels on a Retina screen.
   const QUEUE_THUMBNAIL_MIN_PX = 64;
-  // Pictures larger than this are not handed over; the app shows its placeholder.
   const ARTWORK_MAX_BYTES = 1000000;
   const ARTWORK_READS_AT_ONCE = 2;
   const HEARTBEAT_PLAYING_MS = 1000;
@@ -92,7 +84,6 @@
   let lastQueueJSON = null;
   let lastModesJSON = null;
   let reportTimer = null;
-  // Pictures in use that were sent, or tried, since the page loaded; and those waiting.
   const artworkTried = new Set();
   const artworkWaiting = [];
   let artworkReading = 0;
@@ -131,7 +122,6 @@
     };
   }
 
-  // The smallest image at least ARTWORK_MIN_PX wide, else the largest there is.
   function pickArtwork(artwork) {
     const images = attempt(() => Array.from(artwork || []), [])
       .map((image) => ({
@@ -174,14 +164,12 @@
     };
   }
 
-  // The playlist in the address, while one plays.
   function readPlaylistId() {
     const id = attempt(() => new URLSearchParams(window.location.search).get(PAGE.playlistParam), null);
     return id || null;
   }
 
-  // Names match PlayerCore's Feature. Each feature is checked on its own, so one broken
-  // selector hides only that feature. Player controls count as missing only once a track
+  // Names match PlayerCore's Feature. Player controls count as missing only once a track
   // is loaded.
   function readMissing() {
     const missing = [];
@@ -211,7 +199,6 @@
     return null;
   }
 
-  // Library playlists, in sidebar order, without duplicates.
   function readPlaylists() {
     const items = [];
     const seen = new Set();
@@ -227,7 +214,6 @@
       seen.add(id);
       items.push({ id, title, thumbnailURL: null, isLikedMusic: id === PAGE.likedMusicId });
     }
-    // Liked music first, the rest in sidebar order.
     return items.filter((item) => item.isLikedMusic).concat(items.filter((item) => !item.isLikedMusic));
   }
 
@@ -252,9 +238,7 @@
     }));
   }
 
-  // From the item's data, the smallest size at least QUEUE_THUMBNAIL_MIN_PX wide (else the
-  // largest), whether or not the page has loaded the image; failing that, the image once it
-  // has loaded. Web addresses only: before it loads, the site shows a placeholder.
+  // Web addresses only: before the image loads, the site shows a placeholder.
   function readThumbnail(item) {
     const sizes = attempt(() => Array.from(item.data.thumbnail.thumbnails), [])
       .map((size) => ({ src: size && typeof size.url === 'string' ? size.url : '', width: Number(size && size.width) || 0 }))
@@ -272,14 +256,12 @@
     return text.split(':').reduce((total, part) => total * 60 + Number(part), 0);
   }
 
-  // 'off', 'all', 'one', or null when the button's label is not one we know.
   function readRepeat(button) {
     if (attempt(() => button.getAttribute('aria-pressed'), null) === 'false') return 'off';
     const label = attempt(() => (button.getAttribute('aria-label') || button.getAttribute('title') || '').trim(), '');
     return Object.prototype.hasOwnProperty.call(PAGE.repeatLabels, label) ? PAGE.repeatLabels[label] : null;
   }
 
-  // Each mode is null when it can't be read.
   function readModes() {
     const shuffle = find(PAGE.shuffleButton);
     const repeat = find(PAGE.repeatButton);
@@ -323,9 +305,8 @@
     }
   }
 
-  // The page's own request for a picture it shows: from its cache where it can be, and
-  // without cookies. Resolves to { url, mediaType, data } with the bytes in base64, or null.
-  // (Not `type`: that names the message.)
+  // From the page's cache where it can be, and without cookies. The picture's type is
+  // `mediaType`, not `type`: that names the message.
   async function readArtwork(url) {
     const response = await window.fetch(url, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
     if (!response.ok) return null;
@@ -350,8 +331,6 @@
     }, 50);
   }
 
-  // Posts state when it changed (and every second while playing), health when it changed,
-  // and signedOut when the page drops into its sign-in prompt.
   function report(isHeartbeat) {
     try {
       if (!readyPosted) return;
@@ -402,8 +381,8 @@
     }
   }
 
-  // A heartbeat for the position while playing, and a slower look for changes that fire no
-  // event (the like button, the sign-in prompt) while paused.
+  // While paused, a slower look for changes that fire no event (the like button, the
+  // sign-in prompt).
   function schedulePulse(isPlaying) {
     if (pulseTimer !== null) clearTimeout(pulseTimer);
     pulseTimer = setTimeout(() => {
@@ -502,8 +481,7 @@
         scheduleReport();
       })();
     },
-    // Not a player command: the full window uses it to open the site's own sign-in, which
-    // goes on to Google's pages. Fails when there is no sign-in link (already signed in).
+    // Not a player command: only the full window uses it. Fails when already signed in.
     signIn() {
       const link = find(PAGE.signInLink);
       if (!link) throw new Error('no sign-in link');
@@ -511,7 +489,7 @@
     },
   };
 
-  // Runs a command and says whether it could. Its effect arrives later as a state message.
+  // `ok` means the command ran; its effect arrives later as a state message.
   function command(name, value) {
     try {
       if (!Object.prototype.hasOwnProperty.call(commands, name)) return { ok: false, error: 'unknown command: ' + name };
@@ -525,7 +503,6 @@
     }
   }
 
-  // Forgets what was last reported and reports everything again.
   function refresh() {
     try {
       lastStateJSON = null;
@@ -592,8 +569,7 @@
     writable: false,
   }));
 
-  // Ready once the document has loaded. If the page can't tell yet whether the user is
-  // signed in, wait for the full load.
+  // If the page can't tell yet whether the user is signed in, wait for the full load.
   attempt(() => {
     const readyWhenKnown = () => {
       if (readSignedIn() !== null || document.readyState === 'complete') postReady();

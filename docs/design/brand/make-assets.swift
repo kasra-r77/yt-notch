@@ -1,14 +1,6 @@
-// Draws the brand assets approved in design D6 (YT-7) from their geometry, so they can be
-// regenerated after any change. Run from the repository root:
+// Draws the D6 and D9 brand assets from their geometry. Run from the repository root:
 //
 //     swift docs/design/brand/make-assets.swift
-//
-// Writes:
-//   App/Assets.xcassets/AppIcon.appiconset/          app icon, 16 to 512 at 1x and 2x
-//   App/Assets.xcassets/MenuBarIcon.imageset/        menu bar template icon (PDF)
-//   App/Assets.xcassets/MenuBarIconAttention.imageset/  the same with the "needs you" dot
-//   docs/design/brand/dmg-background.png, @2x        disk image window background
-//   docs/design/brand/icon-*.svg                     layers for Icon Composer
 
 import AppKit
 import CoreGraphics
@@ -32,7 +24,7 @@ func write(_ text: String, to url: URL) throws {
     try text.write(to: url, atomically: true, encoding: .utf8)
 }
 
-/// A bitmap context with the origin at the top left, like the design files.
+/// Origin at the top left, like the design files.
 func bitmap(width: Int, height: Int) -> CGContext {
     let context = CGContext(
         data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
@@ -51,13 +43,10 @@ func savePNG(_ context: CGContext, to url: URL) throws {
     try rep.representation(using: .png, properties: [:])!.write(to: url)
 }
 
-// MARK: App icon
-
 func gradient(_ from: UInt32, _ to: UInt32) -> CGGradient {
     CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: [color(from), color(to)] as CFArray, locations: [0, 1])!
 }
 
-/// A notch hanging from `top`, with concave flares where it meets the top edge.
 func notchPath(left: CGFloat, top: CGFloat, width: CGFloat, height: CGFloat, radius: CGFloat, flare: CGFloat) -> CGPath {
     let path = CGMutablePath()
     path.move(to: CGPoint(x: left - flare, y: top))
@@ -77,8 +66,8 @@ func notchPath(left: CGFloat, top: CGFloat, width: CGFloat, height: CGFloat, rad
     return path
 }
 
-/// D9's C1 geometry, as fractions of the body. Below 40 px of body (about 48 px of icon) the
-/// notch grows and loses its flares, and the bars get fewer and wider.
+/// D9's C1, as fractions of the body. Below 40 px of body (about 48 px of icon) it uses
+/// D9's simpler small-size drawing.
 struct IconGeometry {
     let body: CGFloat
     var simple: Bool { body < 40 }
@@ -99,7 +88,6 @@ struct IconGeometry {
         }
     }
 
-    /// The two beamed quavers, in a box of side `unit` centred below the notch.
     var unit: CGFloat { body * (simple ? 0.4 : 0.42) }
     var notesCentre: CGPoint { CGPoint(x: body / 2, y: body * (simple ? 0.7 : 0.655)) }
     func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: notesCentre.x + x * unit, y: notesCentre.y + y * unit) }
@@ -140,7 +128,7 @@ func drawIconContents(_ context: CGContext, origin: CGPoint, body: CGFloat) {
     context.restoreGState()
 }
 
-/// One app icon image: the macOS grid, an 824 body on a 1024 canvas, with its shadow.
+/// The macOS icon grid: an 824 body on a 1024 canvas.
 func appIcon(pixels: Int) -> CGContext {
     let size = CGFloat(pixels)
     let context = bitmap(width: pixels, height: pixels)
@@ -183,13 +171,9 @@ try write("{\n  \"images\" : [\n" + images.joined(separator: ",\n") + "\n  ],\n 
           to: iconSet.appendingPathComponent("Contents.json"))
 try write("{\n  \"info\" : { \"version\" : 1, \"author\" : \"xcode\" }\n}\n", to: assets.appendingPathComponent("Contents.json"))
 
-// MARK: Menu bar icon
-
-/// The 18 pt template glyph, in a top-left space, drawn in black.
 func drawGlyph(_ context: CGContext, attention: Bool) {
     context.saveGState()
     if attention {
-        // Cut the dot's ring out of everything else.
         let clip = CGMutablePath()
         clip.addRect(CGRect(x: 0, y: 0, width: 18, height: 18))
         clip.addEllipse(in: CGRect(x: 15.5 - 3.4, y: 3.5 - 3.4, width: 6.8, height: 6.8))
@@ -247,15 +231,13 @@ for (name, attention) in [("MenuBarIcon", false), ("MenuBarIconAttention", true)
     """, to: set.appendingPathComponent("Contents.json"))
 }
 
-// MARK: Disk image background
-
 func dmgBackground(scale: Int) -> CGContext {
     let s = CGFloat(scale)
     let context = bitmap(width: 660 * scale, height: 400 * scale)
     context.scaleBy(x: s, y: s)
     let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: [color(0xF4F5F7), color(0xE3E6EA)] as CFArray, locations: [0, 1])!
     context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: 400), options: [])
-    // The arrow from the app icon (centre 165, 180) to Applications (centre 495, 180).
+    // From the app icon (centre 165, 180) to Applications (centre 495, 180), as D6 places them.
     context.setStrokeColor(color(0x9AA0A8))
     context.setLineWidth(3)
     context.setLineCap(.round)
@@ -266,7 +248,6 @@ func dmgBackground(scale: Int) -> CGContext {
     context.addLine(to: CGPoint(x: 390, y: 180))
     context.addLine(to: CGPoint(x: 378, y: 192))
     context.strokePath()
-    // The line of text, drawn through AppKit in the flipped context.
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
     let text = "Drag YT Notch to Applications" as NSString
@@ -284,9 +265,7 @@ func dmgBackground(scale: Int) -> CGContext {
 try savePNG(dmgBackground(scale: 1), to: brand.appendingPathComponent("dmg-background.png"))
 try savePNG(dmgBackground(scale: 2), to: brand.appendingPathComponent("dmg-background@2x.png"))
 
-// MARK: Icon Composer layers
-
-/// Full-bleed 1024 layers: Icon Composer applies the system shape, shadow and appearances.
+// Full bleed: Icon Composer applies the system shape, shadow and appearances.
 let full = IconGeometry(body: 1024)
 func n(_ value: CGFloat) -> String { String(format: "%.2f", value) }
 func svg(_ content: String) -> String {

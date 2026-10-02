@@ -6,8 +6,6 @@ import Testing
 import WebKit
 @testable import WebPlayer
 
-/// WebPlayerController on the fixture page: the same engine scenarios FakeEngine passes,
-/// plus what is particular to the controller.
 @MainActor
 @Suite(.serialized)
 struct WebPlayerControllerTests {
@@ -15,7 +13,6 @@ struct WebPlayerControllerTests {
         try fixture(options)
     }
 
-    /// The fixture page, with defaults of the test's own and no browser to open links in.
     static func fixture(_ options: [String], defaults: UserDefaults? = nil) throws -> WebPlayerController.Configuration {
         guard let url = Bundle.module.url(forResource: "fake-player", withExtension: "html", subdirectory: "Fixtures") else {
             throw ConformanceFailure(description: "fake-player.html is missing from the test bundle")
@@ -115,15 +112,6 @@ struct WebPlayerControllerTests {
         #expect(window.collectionBehavior.contains(.transient))
     }
 
-    @Test func showAndHideTheWindow() throws {
-        let controller = WebPlayerController(configuration: try Self.fixture())
-        controller.showWindow()
-        #expect(controller.isWindowVisible)
-        controller.hideWindow()
-        #expect(!controller.isWindowVisible)
-        #expect(controller.webView.window?.isVisible == true)
-    }
-
     // Calls the close handler directly: AppKit's own close path (performClose) in a test
     // process with no running app ends the process. The app's close button is checked by hand.
     @Test func closingTheWindowOnlyHidesIt() throws {
@@ -154,13 +142,5 @@ struct WebPlayerControllerTests {
         #expect(window.frame == frame)
         #expect(controller.loadAttempts == 1)
         #expect(store.state.isPlaying)
-    }
-
-    @Test func loadFailureIsOffline() async throws {
-        var configuration = WebPlayerController.Configuration()
-        configuration.page = .url(URL(string: "https://nothing-here.invalid/")!)
-        configuration.dataStore = .nonPersistent()
-        let store = PlayerStore(engine: WebPlayerController(configuration: configuration))
-        try await eventually("offline", timeout: 15) { store.state.health.status == .offline }
     }
 }

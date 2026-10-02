@@ -2,7 +2,6 @@ import EngineConformance
 import Testing
 @testable import PlayerCore
 
-/// FakeEngine passes every engine scenario.
 @MainActor
 struct FakeEngineConformanceTests {
     @Test(arguments: EngineScenario.all)
