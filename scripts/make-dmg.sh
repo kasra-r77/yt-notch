@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds a release disk image in dist/. Its layout is design spec D6's and needs create-dmg;
+# Builds a release disk image in dist/. Its styled window needs create-dmg;
 # without it the image is plain. The app is signed ad hoc and isn't notarised.
 #
 # EXPECTED_VERSION, when set, must match the app's version.
@@ -21,6 +21,15 @@ for notice in LICENSE NOTICE THIRD_PARTY_NOTICES.txt; do
   [[ -f "$app/Contents/Resources/$notice" ]] || { echo "error: the app is missing $notice" >&2; exit 1; }
 done
 lipo -archs "$app/Contents/MacOS/YT Notch"
+
+# A signing or linking problem only shows when the app starts, so start it (in CI only).
+if [[ -n "${CI:-}" ]]; then
+  "$app/Contents/MacOS/YT Notch" >/dev/null 2>&1 &
+  pid=$!
+  sleep 5
+  kill -0 "$pid" 2>/dev/null || { echo "error: the app exited at launch" >&2; exit 1; }
+  kill "$pid"
+fi
 
 mkdir -p dist
 dmg="dist/YT-Notch-$version.dmg"
@@ -45,7 +54,7 @@ if command -v create-dmg >/dev/null; then
     "$dmg" "$stage"
   rm -f "$stage/../dmg-background.tiff"
 else
-  echo "note: create-dmg isn't installed, so the disk image is plain (brew install create-dmg for D6's layout)" >&2
+  echo "note: create-dmg isn't installed, so the disk image is plain (brew install create-dmg for the styled window)" >&2
   ln -s /Applications "$stage/Applications"
   hdiutil create -volname "YT Notch" -srcfolder "$stage" -format UDZO -ov "$dmg" >/dev/null
 fi

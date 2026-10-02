@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1.1"
+    CURRENT_PROJECT_VERSION: "2"
     ENABLE_HARDENED_RUNTIME: YES
     # Signed ad hoc: there is no Developer ID yet.
     CODE_SIGN_STYLE: Manual
@@ -40,6 +40,12 @@ targets:
         buildPhase: resources
       - path: THIRD_PARTY_NOTICES.txt
         buildPhase: resources
+    entitlements:
+      path: App/YTNotch.entitlements
+      properties:
+        # Ad hoc signing gives the app and Sparkle.framework no shared team, so the hardened
+        # runtime would refuse to load Sparkle and the app would exit at launch.
+        com.apple.security.cs.disable-library-validation: true
     dependencies:
       - package: YTNotchKit
         product: PlayerCore
