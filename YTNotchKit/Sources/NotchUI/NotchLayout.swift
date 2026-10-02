@@ -42,8 +42,8 @@ enum NotchLayout {
         }
     }
 
-    static var peekTitleFont: NSFont { NSFont.systemFont(ofSize: 13, weight: .semibold) }
-    static var peekArtistFont: NSFont { NSFont.systemFont(ofSize: 11, weight: .regular) }
+    static var peekTitleFont: NSFont { NSFont.systemFont(ofSize: Tokens.Size.titleText, weight: .semibold) }
+    static var peekArtistFont: NSFont { NSFont.systemFont(ofSize: Tokens.Size.secondaryText, weight: .regular) }
 
     /// The peek's one line: the title, 6, the artist.
     static func peekTextWidth(title: String, artist: String) -> CGFloat {

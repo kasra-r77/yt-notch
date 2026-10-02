@@ -42,16 +42,23 @@ public final class NotchPanel {
     var now: () -> Date = Date.init
     var schedulesTicks = true
 
-    public init(screen: ScreenGeometry, store: PlayerStore? = nil, pointer: PointerTracker = .shared) {
+    public init(
+        screen: ScreenGeometry,
+        store: PlayerStore? = nil,
+        openFullWindow: (@MainActor () -> Void)? = nil,
+        pointer: PointerTracker = .shared
+    ) {
         self.screen = screen
         self.store = store
         self.pointer = pointer
         artwork = .shared
         model = NotchModel(outline: .idle(on: screen), band: screen.band)
         model.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        model.expandedExtra = NotchLayout.expandedExtra(on: screen)
         window = NotchWindow(frame: PanelLayout.frame(on: screen))
+        model.actions = NotchActions(store: store, openFullWindow: openFullWindow, select: { [weak self] view in self?.select(view) })
 
-        let host = NSHostingView(rootView: NotchRootView(model: model))
+        let host = NotchHostingView(rootView: NotchRootView(model: model))
         // The panel's size is fixed by PanelLayout; the content must not resize it.
         host.sizingOptions = []
         window.contentView = host
@@ -75,6 +82,7 @@ public final class NotchPanel {
         guard screen != self.screen else { return }
         self.screen = screen
         model.band = screen.band
+        model.expandedExtra = NotchLayout.expandedExtra(on: screen)
         model.outline = NotchLayout.outline(for: machine.appearance, on: screen, peekTextWidth: peekTextWidth)
         window.setFrame(PanelLayout.frame(on: screen), display: true)
         refreshHitTesting()
@@ -202,6 +210,7 @@ public final class NotchPanel {
         if peek != model.peekShown {
             withAnimation(fade(in: peek, reduce: reduce)) { model.peekShown = peek }
         }
+        if case let .expanded(expandedContent) = appearance { model.expandedContent = expandedContent }
         let content = appearance.isExpanded
         if content != model.contentShown {
             withAnimation(fade(in: content, reduce: reduce)) { model.contentShown = content }
@@ -318,11 +327,22 @@ final class NotchModel {
     var artist = ""
     var artwork: NSImage?
     var accent: AccentColor = .white
+    /// How much taller the expanded shapes are than designed, for a tall notch.
+    var expandedExtra: CGFloat = 0
+    /// What the open notch shows, kept after it closes so the content can fade out.
+    var expandedContent: HoverMachine.ExpandedContent?
+    var actions = NotchActions(store: nil)
 
     init(outline: NotchOutline, band: CGFloat) {
         self.outline = outline
         self.band = band
     }
+}
+
+/// Takes the first click in the panel, which is never key, so a control works on the first
+/// press instead of only bringing the window forward.
+final class NotchHostingView: NSHostingView<NotchRootView> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 /// The panel itself: borderless, non-activating, never key or main.

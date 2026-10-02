@@ -62,6 +62,8 @@ public final class NotchDisplayManager {
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let pointer: PointerTracker
     @ObservationIgnored private let store: PlayerStore?
+    /// What Open in the notch does: show the full window. The app sets it.
+    @ObservationIgnored public var openFullWindow: (@MainActor () -> Void)?
     @ObservationIgnored private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     @ObservationIgnored private var fullScreenRecheck: Task<Void, Never>?
 
@@ -124,7 +126,7 @@ public final class NotchDisplayManager {
             if let panel = panels[screen.key] {
                 panel.update(screen: screen)
             } else {
-                panels[screen.key] = NotchPanel(screen: screen, store: store, pointer: pointer)
+                panels[screen.key] = NotchPanel(screen: screen, store: store, openFullWindow: { [weak self] in self?.openFullWindow?() }, pointer: pointer)
             }
         }
         refreshFullScreen()

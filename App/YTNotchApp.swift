@@ -29,6 +29,9 @@ struct YTNotchApp: App {
         }
         _store = State(initialValue: store)
         notches = NotchDisplayManager(store: store)
+        if let webPlayer {
+            notches.openFullWindow = { webPlayer.showWindow() }
+        }
     }
 
     var body: some Scene {

@@ -50,6 +50,47 @@ public enum Tokens {
         public static let peekPadding: CGFloat = 16
         public static let peekTextTop: CGFloat = 4
         public static let peekTextGap: CGFloat = 6
+
+        // The Playing view (D2), positions from the expanded body's top left.
+        public static let artwork: CGFloat = 84
+        public static let artworkPlaceholderIcon: CGFloat = 28
+        public static let control: CGFloat = 28
+        public static let icon: CGFloat = 14
+        public static let playIcon: CGFloat = 18
+        public static let controlGap: CGFloat = 16
+        public static let earGap: CGFloat = 4
+        /// The text column: from x 116, 268 wide.
+        public static let textColumnX: CGFloat = 116
+        public static let textColumnWidth: CGFloat = 268
+        public static let titleY: CGFloat = 48
+        public static let artistY: CGFloat = 66
+        public static let lineGap: CGFloat = 2
+        public static let progressY: CGFloat = 88
+        public static let progressRow: CGFloat = 12
+        public static let timeGap: CGFloat = 8
+        public static let controlsY: CGFloat = 104
+        public static let track: CGFloat = 4
+        public static let knob: CGFloat = 10
+        public static let dragKnob: CGFloat = 12
+        public static let halo: CGFloat = 4
+        public static let toggleDot: CGFloat = 4
+        /// Where the toggle dot sits above the control's bottom edge.
+        public static let toggleDotInset: CGFloat = 1
+        /// Click areas: the progress band, and each transport control's column.
+        public static let progressHitHeight: CGFloat = 28
+        public static let transportHitWidth: CGFloat = 44
+        /// Loading placeholders for the title and the artist.
+        public static let skeletonTitle = CGSize(width: 132, height: 10)
+        public static let skeletonArtist = CGSize(width: 80, height: 8)
+        /// The title's loading bar sits this far below the title's line.
+        public static let skeletonTitleTop: CGFloat = 3
+        public static let knobShadowRadius: CGFloat = 1
+        public static let knobShadowY: CGFloat = 1
+        /// Type sizes, for the fonts below and for measuring text.
+        public static let titleText: CGFloat = 13
+        public static let secondaryText: CGFloat = 11
+        public static let timeText: CGFloat = 10
+        public static let buttonText: CGFloat = 12
     }
 
     /// Radii in points that aren't the notch's own (those are in `Size`).
@@ -58,6 +99,13 @@ public enum Tokens {
         public static let wingArtwork: CGFloat = 5
         public static let wingArtworkSmall: CGFloat = 4
         public static let bar: CGFloat = 1.5
+        public static let artwork: CGFloat = 10
+        public static let thumbnail: CGFloat = 6
+        public static let row: CGFloat = 8
+        public static let control: CGFloat = 8
+        public static let pill: CGFloat = 14
+        public static let track: CGFloat = 2
+        public static let skeleton: CGFloat = 3
     }
 
     /// Colours. The surface is black in light and dark mode; everything on it is white at
@@ -66,8 +114,70 @@ public enum Tokens {
         public static let surface = SwiftUI.Color.black
         public static let textPrimary = SwiftUI.Color.white
         public static let textSecondary = SwiftUI.Color.white.opacity(0.6)
+        public static let textDisabled = SwiftUI.Color.white.opacity(0.25)
+        public static let divider = SwiftUI.Color.white.opacity(0.12)
+        public static let hover = SwiftUI.Color.white.opacity(0.1)
+        public static let pressed = SwiftUI.Color.white.opacity(0.16)
+        public static let selected = SwiftUI.Color.white.opacity(0.16)
+        public static let rowHover = SwiftUI.Color.white.opacity(0.06)
+        public static let rowCurrent = SwiftUI.Color.white.opacity(0.1)
+        public static let rowPressed = SwiftUI.Color.white.opacity(0.14)
         public static let placeholder = SwiftUI.Color.white.opacity(0.08)
+        /// The title's loading bar; the artist's uses `placeholder`.
+        public static let skeletonStrong = SwiftUI.Color.white.opacity(0.1)
+        public static let artworkPlaceholderIcon = SwiftUI.Color.white.opacity(0.3)
+        public static let track = SwiftUI.Color.white.opacity(0.2)
+        public static let halo = SwiftUI.Color.white.opacity(0.2)
+        public static let scroller = SwiftUI.Color.white.opacity(0.4)
+        public static let buttonBackground = SwiftUI.Color.white
+        public static let buttonBackgroundHover = SwiftUI.Color.white.opacity(0.85)
+        public static let buttonBackgroundPressed = SwiftUI.Color.white.opacity(0.7)
+        public static let buttonText = SwiftUI.Color.black
         public static let shadow = SwiftUI.Color.black.opacity(Size.shadowOpacity)
+        /// Under the knob, so it reads on any accent.
+        public static let knobShadow = SwiftUI.Color.black.opacity(0.4)
+    }
+
+    /// Opacities for whole groups.
+    public enum Opacity {
+        /// The progress row when seeking is unavailable (D4).
+        public static let unavailableProgress: Double = 0.4
+    }
+
+    /// Type: SF Pro, the system font.
+    public enum Font {
+        public static let title = SwiftUI.Font.system(size: Size.titleText, weight: .semibold)
+        public static let row = SwiftUI.Font.system(size: Size.titleText, weight: .regular)
+        public static let secondary = SwiftUI.Font.system(size: Size.secondaryText, weight: .regular)
+        public static let time = SwiftUI.Font.system(size: Size.timeText, weight: .regular).monospacedDigit()
+        public static let button = SwiftUI.Font.system(size: Size.buttonText, weight: .semibold)
+        public static let icon = SwiftUI.Font.system(size: Size.icon, weight: .medium)
+        public static let playIcon = SwiftUI.Font.system(size: Size.playIcon, weight: .medium)
+        public static let artworkPlaceholderIcon = SwiftUI.Font.system(size: Size.artworkPlaceholderIcon, weight: .regular)
+    }
+
+    /// SF Symbol names for every control (D5, "Icons").
+    public enum Symbol {
+        public static let tabPlaying = "music.note"
+        public static let tabPlaylists = "music.note.list"
+        public static let tabUpNext = "list.bullet"
+        public static let like = "hand.thumbsup"
+        public static let liked = "hand.thumbsup.fill"
+        public static let open = "arrow.up.forward.app"
+        public static let shuffle = "shuffle"
+        public static let previous = "backward.fill"
+        public static let play = "play.fill"
+        public static let pause = "pause.fill"
+        public static let next = "forward.fill"
+        public static let `repeat` = "repeat"
+        public static let repeatOne = "repeat.1"
+        public static let noArtwork = "music.note"
+        public static let playlistTile = "music.note.list"
+        public static let likedTile = "hand.thumbsup.fill"
+        public static let savedList = "clock.arrow.circlepath"
+        public static let signedOut = "person.crop.circle"
+        public static let offline = "wifi.slash"
+        public static let bridgeBroken = "wrench.and.screwdriver"
     }
 
     /// The accent rule (D5): the artwork's dominant colour, lifted to this contrast on black,
@@ -110,6 +220,8 @@ public enum Tokens {
         /// `barPhases` of a full cycle.
         public static let barSwings: [TimeInterval] = [0.55, 0.8, 0.65, 0.72]
         public static let barPhases: [Double] = [0, 0.35, 0.7, 0.15]
+        /// How often the elapsed time redraws while playing.
+        public static let progressRefresh: TimeInterval = 0.25
     }
 
     /// Animations built from the timings above.

@@ -69,6 +69,8 @@ struct ArtworkTile: View {
     let image: NSImage?
     let size: CGFloat
     let radius: CGFloat
+    /// Drawn on the placeholder when there is no artwork.
+    var placeholderSymbol: String?
 
     var body: some View {
         ZStack {
@@ -76,6 +78,11 @@ struct ArtworkTile: View {
                 Image(nsImage: image).resizable().interpolation(.high).aspectRatio(contentMode: .fill)
             } else {
                 Tokens.Color.placeholder
+                if let placeholderSymbol {
+                    Image(systemName: placeholderSymbol)
+                        .font(Tokens.Font.artworkPlaceholderIcon)
+                        .foregroundStyle(Tokens.Color.artworkPlaceholderIcon)
+                }
             }
         }
         .frame(width: size, height: size)
@@ -128,13 +135,13 @@ struct PeekLine: View {
     var body: some View {
         HStack(spacing: Tokens.Size.peekTextGap) {
             Text(model.title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(Tokens.Font.title)
                 .foregroundStyle(Tokens.Color.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.tail)
             if !model.artist.isEmpty {
                 Text(model.artist)
-                    .font(.system(size: 11))
+                    .font(Tokens.Font.secondary)
                     .foregroundStyle(Tokens.Color.textSecondary)
                     .lineLimit(1)
                     .fixedSize()
@@ -154,14 +161,20 @@ struct PeekLine: View {
 }
 
 /// Where the expanded views go: Playing (N2.5), the messages (N2.6) and the lists (N2.7).
-/// Laid out at the final size and revealed by the growing shape.
+/// Laid out at the final size and revealed by the growing shape; it takes clicks only
+/// while shown.
 struct ExpandedContent: View {
     let model: NotchModel
 
     var body: some View {
-        Color.clear
-            .frame(width: model.outline.width, height: model.outline.height)
-            .allowsHitTesting(false)
+        Group {
+            if model.expandedContent == .view(.playing), let store = model.actions.store {
+                PlayingView(state: store.state, model: model, actions: model.actions, extra: model.expandedExtra)
+            } else {
+                Color.clear.frame(width: model.outline.width, height: model.outline.height)
+            }
+        }
+        .allowsHitTesting(model.contentShown)
     }
 }
 
