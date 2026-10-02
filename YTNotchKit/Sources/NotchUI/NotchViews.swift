@@ -46,7 +46,8 @@ struct NotchRootView: View {
 }
 
 /// Artwork on the left wing, bars on the right, 12 in from each outer edge, on the band.
-/// Nothing is drawn where the real notch is: both sit in the outer 44.
+/// Nothing is drawn where the real notch is: both sit in the outer 44. A pill on a screen
+/// without a notch shows the title between them and a progress line along its bottom (D8).
 struct WingsView: View {
     let model: NotchModel
 
@@ -55,13 +56,25 @@ struct WingsView: View {
         HStack(spacing: 0) {
             ArtworkTile(image: model.artwork, size: size,
                         radius: size >= Tokens.Size.wingArtwork ? Tokens.Radius.wingArtwork : Tokens.Radius.wingArtworkSmall)
-            Spacer(minLength: 0)
+            if model.middleShown {
+                PillTitle(title: model.title, artist: model.artist, isPlaying: model.isPlaying, reduceMotion: model.reduceMotion)
+                    .padding(.horizontal, Tokens.Size.pillMiddleGap)
+            } else {
+                Spacer(minLength: 0)
+            }
             BarsView(accent: SwiftUI.Color(accent: model.accent),
                      isAnimating: model.isPlaying && model.wingsShown && !model.reduceMotion,
                      maxHeight: NotchLayout.barMaxHeight(band: model.band))
         }
         .padding(.horizontal, Tokens.Size.wingInset)
         .frame(width: model.outline.width, height: model.band)
+        .overlay(alignment: .bottom) {
+            if model.middleShown, let state = model.actions.store?.state {
+                PillProgressLine(state: state, accent: SwiftUI.Color(accent: model.accent))
+                    .padding(.horizontal, Tokens.Size.collapsedRadius)
+            }
+        }
+        .offset(x: model.outline.offset)
     }
 }
 
@@ -152,6 +165,7 @@ struct PeekLine: View {
         .animation(Tokens.Motion.crossfade, value: trackKey)
         .frame(width: lineWidth, height: lineHeight, alignment: .top)
         .padding(.top, model.band + Tokens.Size.peekTextTop)
+        .offset(x: model.outline.offset)
     }
 
     /// Changes with the track, so a new title crossfades in.

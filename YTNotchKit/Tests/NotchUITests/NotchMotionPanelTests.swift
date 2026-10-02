@@ -27,8 +27,8 @@ struct NotchMotionPanelTests {
         store = PlayerStore(engine: engine)
     }
 
-    func panel() -> NotchPanel {
-        let panel = NotchPanel(screen: Displays.external, store: store, pointer: pointer)
+    func panel(on screen: ScreenGeometry = Displays.external) -> NotchPanel {
+        let panel = NotchPanel(screen: screen, store: store, pointer: pointer)
         panel.schedulesTicks = false
         panel.now = { [clock] in clock.now }
         return panel
@@ -78,7 +78,7 @@ struct NotchMotionPanelTests {
     }
 
     @Test func aTrackChangePeeksWithTheNewTitle() async throws {
-        let panel = panel()
+        let panel = panel(on: Displays.macBookPro14)
         defer { panel.close() }
         store.play()
         try await Self.eventually("playing") { panel.machine.appearance == .collapsed(.playing) }
@@ -86,8 +86,25 @@ struct NotchMotionPanelTests {
         store.next()
         try await Self.eventually("peeking") { panel.machine.appearance == .collapsed(.peek) }
         #expect(panel.model.title != first)
-        #expect(panel.model.outline.height == Displays.external.band + Tokens.Size.peekRow)
+        #expect(panel.model.outline.height == Displays.macBookPro14.band + Tokens.Size.peekRow)
         #expect(panel.model.peekShown)
+        #expect(!panel.model.middleShown, "a notch has no middle to show")
+    }
+
+    /// On a screen without a notch the pill's middle shows the title, so a new song changes
+    /// it there instead of sliding out the peek (D8).
+    @Test func withoutANotchTheTitleShowsInTheMiddleInsteadOfAPeek() async throws {
+        let panel = panel()
+        defer { panel.close() }
+        store.play()
+        try await Self.eventually("playing") { panel.machine.appearance == .collapsed(.playing) }
+        #expect(panel.model.middleShown)
+        let first = store.state.track?.title
+        store.next()
+        try await Self.eventually("the new title") { panel.model.title != first }
+        #expect(panel.machine.appearance == .collapsed(.playing))
+        #expect(!panel.model.peekShown)
+        #expect(panel.model.middleShown)
     }
 
     @Test func signedOutOpensOnTheMessage() async throws {

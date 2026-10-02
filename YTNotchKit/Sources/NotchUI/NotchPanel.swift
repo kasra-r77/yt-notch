@@ -23,6 +23,10 @@ public final class NotchPanel {
     public private(set) var screen: ScreenGeometry
     public private(set) var isFullScreen = false
     public private(set) var isClosed = false
+    /// A pill with no room left of the menu bar icons is hidden until there is (D8).
+    public private(set) var isCrowdedOut = false
+    /// Where the first menu bar icon starts on this screen, in screen x.
+    public private(set) var firstIconX: CGFloat?
 
     let model: NotchModel
     let window: NotchWindow
@@ -55,6 +59,7 @@ public final class NotchPanel {
         model = NotchModel(outline: .idle(on: screen), band: screen.band)
         model.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         model.expandedExtra = NotchLayout.expandedExtra(on: screen)
+        machine.peeksOnTrackChange = screen.hasNotch
         window = NotchWindow(frame: PanelLayout.frame(on: screen))
         model.actions = NotchActions(
             store: store, openFullWindow: openFullWindow, retry: retry,
@@ -89,7 +94,8 @@ public final class NotchPanel {
         self.screen = screen
         model.band = screen.band
         model.expandedExtra = NotchLayout.expandedExtra(on: screen)
-        model.outline = NotchLayout.outline(for: machine.appearance, on: screen, peekTextWidth: peekTextWidth)
+        machine.peeksOnTrackChange = screen.hasNotch
+        model.outline = target(for: machine.appearance)
         window.setFrame(PanelLayout.frame(on: screen), display: true)
         refreshHitTesting()
     }
@@ -99,8 +105,16 @@ public final class NotchPanel {
     public func setFullScreen(_ isFullScreen: Bool) {
         guard isFullScreen != self.isFullScreen else { return }
         self.isFullScreen = isFullScreen
-        model.isHidden = isFullScreen
+        model.isHidden = isFullScreen || isCrowdedOut
         machine.fullScreen(isFullScreen, at: now())
+        apply()
+    }
+
+    /// Where the first menu bar icon on this screen starts, in screen x, or nil when there
+    /// are none. On a screen without a notch the pill keeps clear of it (D8).
+    public func setMenuBarIcons(firstX: CGFloat?) {
+        guard firstX != firstIconX else { return }
+        firstIconX = firstX
         apply()
     }
 
@@ -156,7 +170,7 @@ public final class NotchPanel {
     public func contains(_ point: CGPoint) -> Bool {
         let frame = window.frame
         // Most pointer moves are nowhere near the panel. Its top edge counts as inside.
-        guard !isFullScreen, !isClosed, (frame.minX...frame.maxX).contains(point.x), (frame.minY...frame.maxY).contains(point.y) else {
+        guard !isFullScreen, !isCrowdedOut, !isClosed, (frame.minX...frame.maxX).contains(point.x), (frame.minY...frame.maxY).contains(point.y) else {
             return false
         }
         // Into the panel's y-down space. The top row of pixels counts as inside, so throwing
@@ -200,7 +214,10 @@ public final class NotchPanel {
         guard !isClosed else { return }
         let appearance = machine.appearance
         let previous = model.appearance
-        let outline = NotchLayout.outline(for: appearance, on: screen, peekTextWidth: peekTextWidth)
+        let outline = target(for: appearance)
+        let middle = !screen.hasNotch && appearance == .collapsed(.playing)
+            && NotchLayout.pillMiddleWidth(pillWidth: outline.width, band: screen.band) >= Tokens.Size.pillMiddleMinimum
+        if model.middleShown != middle { model.middleShown = middle }
         if appearance != previous || outline != model.outline {
             applyFades(from: previous, to: appearance)
             let motion = NotchMotion.between(previous, appearance, reduceMotion: model.reduceMotion)
@@ -220,6 +237,27 @@ public final class NotchPanel {
         }
         refreshHitTesting()
         scheduleTick()
+    }
+
+    /// The outline for an appearance. A collapsed pill on a screen without a notch keeps clear
+    /// of the menu bar icons, or hides when it can't (D8).
+    private func target(for appearance: HoverMachine.Appearance) -> NotchOutline {
+        var outline = NotchLayout.outline(for: appearance, on: screen, peekTextWidth: peekTextWidth)
+        var crowdedOut = false
+        if !screen.hasNotch, case .collapsed = appearance {
+            let placement = NotchLayout.pillPlacement(
+                width: outline.width, flare: outline.flare, centreX: screen.centreX,
+                firstIconX: firstIconX, room: PanelLayout.frame(on: screen).width / 2
+            )
+            outline.width = placement.width
+            outline.offset = placement.offset
+            crowdedOut = placement.isHidden
+        }
+        if crowdedOut != isCrowdedOut {
+            isCrowdedOut = crowdedOut
+            model.isHidden = isFullScreen || crowdedOut
+        }
+        return outline
     }
 
     /// Wings, peek text and expanded content each fade on their own clock (design spec,
@@ -371,6 +409,9 @@ final class NotchModel {
     var isHidden = false
     var reduceMotion = false
     var wingsShown = false
+    /// A pill on a screen without a notch shows the title and a progress line between its
+    /// wings while there is room (D8).
+    var middleShown = false
     var peekShown = false
     var contentShown = false
     var isPlaying = false

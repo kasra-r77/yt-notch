@@ -73,6 +73,9 @@ public struct HoverMachine: Equatable, Sendable {
     public private(set) var view: ExpandedView = .playing
     public private(set) var needsAttention = false
     public private(set) var isFullScreen = false
+    /// Whether a new song slides out the peek. Not on a screen without a notch, where the
+    /// pill shows the title already (D8).
+    public var peeksOnTrackChange = true
 
     /// When the peek finished sliding out. Nil while it slides out, and while the pointer
     /// rests on it (resting drops the peek's timer).
@@ -130,7 +133,7 @@ public struct HoverMachine: Equatable, Sendable {
     /// The track changed. A collapsed Playing notch peeks; a peek already out crossfades
     /// its text and holds again from now. Never while expanded or full screen.
     public mutating func trackChanged(at now: Date) {
-        guard !isFullScreen, phase == .collapsed else { return }
+        guard peeksOnTrackChange, !isFullScreen, phase == .collapsed else { return }
         switch collapsed {
         case .idle:
             break

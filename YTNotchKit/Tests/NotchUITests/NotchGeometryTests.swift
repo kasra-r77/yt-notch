@@ -130,8 +130,8 @@ struct NotchShapeTests {
 
     @Test func theShapeAnimatesAllFourValues() {
         var shape = NotchShape(NotchOutline(width: 1, height: 2, bottomRadius: 3, flare: 4))
-        shape.animatableData = AnimatablePair(AnimatablePair(10, 20), AnimatablePair(30, 40))
-        #expect(shape.outline == NotchOutline(width: 10, height: 20, bottomRadius: 30, flare: 40))
+        shape.animatableData = AnimatablePair(AnimatablePair(10, 20), AnimatablePair(30, AnimatablePair(40, -50)))
+        #expect(shape.outline == NotchOutline(width: 10, height: 20, bottomRadius: 30, flare: 40, offset: -50))
     }
 }
 

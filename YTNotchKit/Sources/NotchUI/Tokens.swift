@@ -121,6 +121,23 @@ public enum Tokens {
         public static let emptyIcon: CGFloat = 24
         /// Between a loading row's two bars.
         public static let skeletonRowGap: CGFloat = 6
+        // The pill on a screen without a notch (D8): its middle, and keeping clear of icons.
+        /// The title and artist, and the gap between them.
+        public static let pillText: CGFloat = 12
+        public static let pillTextGap: CGFloat = 6
+        /// Between the middle and the artwork on one side and the bars on the other.
+        public static let pillMiddleGap: CGFloat = 10
+        /// A middle narrower than this isn't shown.
+        public static let pillMiddleMinimum: CGFloat = 32
+        /// The progress line along the bottom edge.
+        public static let pillProgress: CGFloat = 2
+        /// The smallest pill: the artwork and the bars, with no middle.
+        public static let pillMinimum: CGFloat = 2 * wing
+        /// Clear space between the pill and the first menu bar icon to its right.
+        public static let pillIconClearance: CGFloat = 8
+        /// A scrolling title's edge fades, at the start and at the end.
+        public static let pillFadeStart: CGFloat = 10
+        public static let pillFadeEnd: CGFloat = 16
         /// Type sizes, for the fonts below and for measuring text.
         public static let titleText: CGFloat = 13
         public static let secondaryText: CGFloat = 11
@@ -163,6 +180,8 @@ public enum Tokens {
         public static let artworkPlaceholderIcon = SwiftUI.Color.white.opacity(0.3)
         /// The icon over an empty list.
         public static let emptyIcon = SwiftUI.Color.white.opacity(0.3)
+        /// Behind the pill's progress line.
+        public static let pillTrack = SwiftUI.Color.white.opacity(0.15)
         public static let track = SwiftUI.Color.white.opacity(0.2)
         public static let halo = SwiftUI.Color.white.opacity(0.2)
         public static let scroller = SwiftUI.Color.white.opacity(0.4)
@@ -193,6 +212,8 @@ public enum Tokens {
         public static let artworkPlaceholderIcon = SwiftUI.Font.system(size: Size.artworkPlaceholderIcon, weight: .regular)
         public static let messageIcon = SwiftUI.Font.system(size: Size.messageIcon, weight: .medium)
         public static let savedIcon = SwiftUI.Font.system(size: Size.savedIcon, weight: .medium)
+        public static let pillTitle = SwiftUI.Font.system(size: Size.pillText, weight: .semibold)
+        public static let pillArtist = SwiftUI.Font.system(size: Size.pillText, weight: .regular)
         public static let emptyIcon = SwiftUI.Font.system(size: Size.emptyIcon, weight: .regular)
     }
 
@@ -262,6 +283,14 @@ public enum Tokens {
         public static let barPhases: [Double] = [0, 0.35, 0.7, 0.15]
         /// How often the elapsed time redraws while playing.
         public static let progressRefresh: TimeInterval = 0.25
+        /// How often the pill's progress line moves on while playing.
+        public static let pillProgressRefresh: TimeInterval = 0.5
+        /// A long title in the pill: points per second, the rest at the start, the rest at the end.
+        public static let pillScrollSpeed: Double = 30
+        public static let pillScrollRest: TimeInterval = 2
+        public static let pillScrollEndRest: TimeInterval = 1
+        /// How often the menu bar icons are looked at, on screens with a pill.
+        public static let menuBarIconsRefresh: TimeInterval = 2
     }
 
     /// Animations built from the timings above.

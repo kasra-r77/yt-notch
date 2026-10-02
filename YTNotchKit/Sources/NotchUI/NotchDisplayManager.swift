@@ -78,6 +78,7 @@ public final class NotchDisplayManager {
     }
     @ObservationIgnored private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     @ObservationIgnored private var fullScreenRecheck: Task<Void, Never>?
+    @ObservationIgnored private var iconsWatch: Task<Void, Never>?
 
     /// Reads the setting from `defaults`, shows a notch for `store` on each chosen display and
     /// starts following display, Space and app changes.
@@ -119,6 +120,7 @@ public final class NotchDisplayManager {
         for (center, observer) in observers { center.removeObserver(observer) }
         observers.removeAll()
         fullScreenRecheck?.cancel()
+        iconsWatch?.cancel()
         for panel in panels.values { panel.close() }
         panels.removeAll()
     }
@@ -143,7 +145,7 @@ public final class NotchDisplayManager {
                 panels[screen.key] = panel
             }
         }
-        refreshFullScreen()
+        refreshWindows()
     }
 
     /// Two identical monitors without serial numbers can share a key; the second gets its
@@ -157,8 +159,9 @@ public final class NotchDisplayManager {
         }
     }
 
-    /// One look at the window list for every display.
-    func refreshFullScreen() {
+    /// One look at the window list for every display: is another app full screen there, and
+    /// where do the menu bar icons start (for a pill to keep clear of them, D8).
+    func refreshWindows() {
         guard !panels.isEmpty else { return }
         let windows = readWindows()
         let primaryHeight = displays.first?.frame.height ?? 0
@@ -166,6 +169,9 @@ public final class NotchDisplayManager {
         for panel in panels.values {
             let bounds = panel.screen.globalBounds(primaryHeight: primaryHeight)
             panel.setFullScreen(FullScreenDetector.isFullScreen(display: bounds, windows: windows, ownPID: ownPID))
+            if !panel.screen.hasNotch {
+                panel.setMenuBarIcons(firstX: MenuBarIcons.firstIconX(on: panel.screen, windows: windows, primaryHeight: primaryHeight))
+            }
         }
     }
 
@@ -177,6 +183,22 @@ public final class NotchDisplayManager {
         let workspace = NSWorkspace.shared.notificationCenter
         observe(workspace, NSWorkspace.activeSpaceDidChangeNotification) { $0.spaceOrAppChanged() }
         observe(workspace, NSWorkspace.didActivateApplicationNotification) { $0.spaceOrAppChanged() }
+        observe(workspace, NSWorkspace.didLaunchApplicationNotification) { $0.spaceOrAppChanged() }
+        observe(workspace, NSWorkspace.didTerminateApplicationNotification) { $0.spaceOrAppChanged() }
+        watchMenuBarIcons()
+    }
+
+    /// Menu bar icons come, go and change width with no notification, so screens with a
+    /// pill look at them every couple of seconds.
+    private func watchMenuBarIcons() {
+        iconsWatch?.cancel()
+        iconsWatch = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Tokens.Timing.menuBarIconsRefresh))
+                guard let self, !Task.isCancelled else { return }
+                if self.panels.values.contains(where: { !$0.screen.hasNotch }) { self.refreshWindows() }
+            }
+        }
     }
 
     private func observe(_ center: NotificationCenter, _ name: Notification.Name, _ action: @escaping @MainActor (NotchDisplayManager) -> Void) {
@@ -190,13 +212,13 @@ public final class NotchDisplayManager {
     }
 
     private func spaceOrAppChanged() {
-        refreshFullScreen()
+        refreshWindows()
         // The window list can lag a Space change, so look again once it has settled.
         fullScreenRecheck?.cancel()
         fullScreenRecheck = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
-            self?.refreshFullScreen()
+            self?.refreshWindows()
         }
     }
 }

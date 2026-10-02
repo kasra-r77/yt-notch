@@ -1,18 +1,22 @@
 import CoreGraphics
 
-/// The four values every notch shape is drawn from (design spec, "Corner geometry"): the
-/// body's width and height, its bottom corner radius, and the flare at the top on each side.
+/// The values every notch shape is drawn from (design spec, "Corner geometry"): the body's
+/// width and height, its bottom corner radius, the flare at the top on each side, and how
+/// far left of the notch's centre a pill has moved to keep clear of menu bar icons (D8).
 public struct NotchOutline: Hashable, Sendable {
     public var width: CGFloat
     public var height: CGFloat
     public var bottomRadius: CGFloat
     public var flare: CGFloat
+    /// The body's centre, from the screen's notch centre; negative is to the left.
+    public var offset: CGFloat
 
-    public init(width: CGFloat, height: CGFloat, bottomRadius: CGFloat, flare: CGFloat) {
+    public init(width: CGFloat, height: CGFloat, bottomRadius: CGFloat, flare: CGFloat, offset: CGFloat = 0) {
         self.width = width
         self.height = height
         self.bottomRadius = bottomRadius
         self.flare = flare
+        self.offset = offset
     }
 
     /// The body and both flares.

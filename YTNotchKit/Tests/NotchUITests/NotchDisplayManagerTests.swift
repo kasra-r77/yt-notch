@@ -153,12 +153,12 @@ struct NotchDisplayManagerTests {
         // The external display, in window-list coordinates: the built-in display (982 tall)
         // is at the origin, and y runs down.
         desk.windows = [.init(ownerPID: 1, layer: 0, bounds: CGRect(x: 1512, y: 982 - 1120, width: 1792, height: 1120))]
-        manager.refreshFullScreen()
+        manager.refreshWindows()
         #expect(!manager.notches[0].isFullScreen)
         #expect(manager.notches[1].isFullScreen)
 
         desk.windows = []
-        manager.refreshFullScreen()
+        manager.refreshWindows()
         #expect(!manager.notches[1].isFullScreen)
     }
 
