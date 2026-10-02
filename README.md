@@ -30,6 +30,12 @@ defaults write io.github.kasra-r77.ytnotch engine web
 
 Then open the app and choose **Show Web Player** in its menu to sign in. To go back, run `defaults delete io.github.kasra-r77.ytnotch engine`.
 
+The app logs to the system log under one subsystem. To watch what the web player does, including its recovery steps:
+
+```bash
+log stream --level info --predicate 'subsystem == "io.github.kasra-r77.ytnotch"'
+```
+
 ## Test
 
 ```bash

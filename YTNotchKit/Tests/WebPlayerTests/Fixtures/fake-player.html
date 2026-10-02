@@ -9,7 +9,8 @@
   sign-in markers, the sidebar's playlist entries, the queue, and the shuffle and repeat
   controls. Their structure follows the site as measured in the spikes (S0.3, S0.4).
   Playback is simulated, so tests are deterministic and need no network or audio.
-  Options come from the address's hash, comma-separated:
+  Options come from the address's query or hash, comma-separated (reload tests use the
+  query, since a load that changes only the hash stays in the same document):
     signed-out      the user is not signed in
     no-handlers     the page registers no Media Session action handlers
     no-like         there is no like button
@@ -19,10 +20,11 @@
     no-shuffle      there is no shuffle button
     no-repeat       there is no repeat button
     other-language  the repeat button's labels are not in English
+    autoplay        the first track starts playing as the page loads
   `window.fixture` lets tests drive the page: advance time, switch tracks, sign out, and so on.
 -->
 <script>
-  const options = new Set(location.hash.slice(1).split(',').filter(Boolean));
+  const options = new Set([location.search, location.hash].map((part) => part.slice(1)).join(',').split(',').filter(Boolean));
   window.fixture = { loggedIn: !options.has('signed-out'), errors: [] };
   window.addEventListener('error', (event) => window.fixture.errors.push(String(event.message)));
   window.addEventListener('unhandledrejection', (event) => window.fixture.errors.push('unhandled rejection: ' + String(event.reason)));
@@ -235,7 +237,7 @@
       });
       navigator.mediaSession.setActionHandler('seekto', (details) => { video.currentTime = details.seekTime; });
     }
-    load(0, false);
+    load(0, options.has('autoplay'));
   }
   if (options.has('no-like') && likeButton.isConnected) likeButton.parentElement.remove();
 
@@ -264,6 +266,11 @@
     removeLikeButton() { if (likeButton.isConnected) likeButton.parentElement.remove(); },
     unregister(action) { navigator.mediaSession.setActionHandler(action, null); },
     removeShuffle() { shuffleButton.parentElement.remove(); },
+    /// Clears every timer on the page, which silences the bridge's heartbeat: a stall.
+    stopTimers() {
+      const last = setTimeout(() => {}, 0);
+      for (let id = 0; id <= last; id++) { clearTimeout(id); clearInterval(id); }
+    },
     status() {
       return {
         index, time, paused, liked: liked.has(current().id), title: current().title,

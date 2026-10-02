@@ -3,6 +3,7 @@
 // Injected at document start into the main frame of music.youtube.com. It reads what is
 // playing and presses the site's own controls, and talks to the app through the `ytNotch`
 // message handler (page to app) and `window.__ytNotch.command(name, value)` (app to page).
+// `window.__ytNotch.refresh()` makes it report everything again, for recovery and wake.
 // The contract is in the plan, section "Web bridge contract".
 //
 // All Google-specific knowledge in the app lives in this file. Plain JavaScript, no
@@ -412,6 +413,22 @@
     }
   }
 
+  // Forgets what was last reported and reports everything again.
+  function refresh() {
+    try {
+      lastStateJSON = null;
+      lastHealthJSON = null;
+      lastPlaylistsJSON = null;
+      lastQueueJSON = null;
+      lastModesJSON = null;
+      if (readyPosted) report(false);
+      else postReady();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   // MARK: Setup, at document start before the site's own scripts
 
   function captureMediaSession() {
@@ -457,7 +474,7 @@
   }
 
   attempt(() => Object.defineProperty(window, '__ytNotch', {
-    value: Object.freeze({ version: BRIDGE_VERSION, command }),
+    value: Object.freeze({ version: BRIDGE_VERSION, command, refresh }),
     configurable: false,
     enumerable: false,
     writable: false,

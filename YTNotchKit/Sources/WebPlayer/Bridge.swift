@@ -25,6 +25,11 @@ public enum Bridge {
     return window.__ytNotch ? window.__ytNotch.command(name, value) : { ok: false, error: 'bridge not attached' };
     """
 
+    /// Asks the bridge to report everything again. Resolves to false when it isn't attached.
+    public static let refreshFunctionBody = """
+    return Boolean(window.__ytNotch && window.__ytNotch.refresh && window.__ytNotch.refresh());
+    """
+
     /// The `name` and `value` arguments for `commandFunctionBody`.
     public static func arguments(for command: PlayerCommand) -> [String: Any] {
         let (name, value): (String, Any) = switch command {

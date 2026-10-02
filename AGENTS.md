@@ -40,6 +40,7 @@ Test support lives in `YTNotchKit/Tests/EngineConformance`: scenarios every `Pla
 - The store runs on the main actor and is the only writer of state.
 - The notch never talks to the web view, and the web view never talks to the notch: everything goes through the store.
 - The UI only shows what the bridge reports; it never assumes a command worked.
+- Log with `Logger(subsystem: "io.github.kasra-r77.ytnotch", category: <component>)`: one subsystem for the app, one category per component (`WebPlayer` so far). Never log what is playing or anything from the user's account; keep logged values to states, counts and errors.
 
 ## Build and test
 
