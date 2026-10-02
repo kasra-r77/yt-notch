@@ -8,12 +8,15 @@ import SwiftUI
 /// and never activates the app, so typing elsewhere is never interrupted. It stays the same
 /// size and draws each shape top-centred. Only the shape takes clicks: the panel ignores
 /// mouse events except while the pointer is inside the target shape, so everywhere else
-/// clicks reach the app underneath. It fades out while another app is full screen on its
-/// display.
+/// clicks reach the app underneath. It fades in when it is built, and fades out while another
+/// app is full screen on its display.
+///
+/// Panels don't watch the system themselves: `NotchDisplayManager` creates and removes
+/// them, and tells them about display changes and full screen.
 ///
 /// Built on our own panel rather than DynamicNotchKit; see `docs/decisions.md`.
 @MainActor
-public final class NotchPanel: NSObject {
+public final class NotchPanel {
     public private(set) var screen: ScreenGeometry
     public private(set) var isFullScreen = false
 
@@ -21,7 +24,6 @@ public final class NotchPanel: NSObject {
     let window: NotchWindow
     private let pointer: PointerTracker
     private var pointerObservation: Int?
-    private var fullScreenRecheck: Task<Void, Never>?
     private var cachedHitPath: (outline: NotchOutline, size: CGSize, path: CGPath)?
 
     public init(screen: ScreenGeometry, pointer: PointerTracker = .shared) {
@@ -29,7 +31,6 @@ public final class NotchPanel: NSObject {
         self.pointer = pointer
         model = NotchModel(outline: .idle(on: screen))
         window = NotchWindow(frame: PanelLayout.frame(on: screen))
-        super.init()
 
         let host = NSHostingView(rootView: NotchRootView(model: model))
         // The panel's size is fixed by PanelLayout; the content must not resize it.
@@ -39,23 +40,10 @@ public final class NotchPanel: NSObject {
 
         pointerObservation = pointer.observe { [weak self] location in self?.pointerMoved(to: location) }
         pointerMoved(to: pointer.location)
-
-        let workspace = NSWorkspace.shared.notificationCenter
-        workspace.addObserver(self, selector: #selector(spaceOrAppChanged), name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
-        workspace.addObserver(self, selector: #selector(spaceOrAppChanged), name: NSWorkspace.didActivateApplicationNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(screensChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        refreshFullScreen()
     }
 
-    /// A panel for the built-in display if it has a notch, otherwise for the main display.
-    /// The display manager (N2.2) replaces this with a panel per chosen display.
-    public static func onPreferredDisplay() -> NotchPanel? {
-        let screens = NSScreen.screens.map(ScreenGeometry.init)
-        guard let screen = screens.first(where: \.hasNotch) ?? NSScreen.main.map(ScreenGeometry.init) else { return nil }
-        return NotchPanel(screen: screen)
-    }
-
-    /// Takes new sizes after the display changed (resolution, menu bar).
+    /// Takes new sizes and position after the display changed (resolution, arrangement,
+    /// menu bar).
     public func update(screen: ScreenGeometry) {
         guard screen != self.screen else { return }
         self.screen = screen
@@ -73,12 +61,13 @@ public final class NotchPanel: NSObject {
         pointerMoved(to: pointer.location)
     }
 
+    public private(set) var isClosed = false
+
     public func close() {
+        guard !isClosed else { return }
+        isClosed = true
         if let pointerObservation { pointer.stopObserving(pointerObservation) }
         pointerObservation = nil
-        fullScreenRecheck?.cancel()
-        NSWorkspace.shared.notificationCenter.removeObserver(self)
-        NotificationCenter.default.removeObserver(self)
         window.close()
     }
 
@@ -89,7 +78,7 @@ public final class NotchPanel: NSObject {
     public func contains(_ point: CGPoint) -> Bool {
         let frame = window.frame
         // Most pointer moves are nowhere near the panel. Its top edge counts as inside.
-        guard !model.isHidden, (frame.minX...frame.maxX).contains(point.x), (frame.minY...frame.maxY).contains(point.y) else {
+        guard !isFullScreen, !isClosed, (frame.minX...frame.maxX).contains(point.x), (frame.minY...frame.maxY).contains(point.y) else {
             return false
         }
         // Into the panel's y-down space. The top row of pixels counts as inside, so throwing
@@ -111,29 +100,6 @@ public final class NotchPanel: NSObject {
         let ignores = !contains(location)
         if window.ignoresMouseEvents != ignores { window.ignoresMouseEvents = ignores }
     }
-
-    // MARK: Changes
-
-    @objc private func spaceOrAppChanged(_ notification: Notification) {
-        refreshFullScreen()
-        // The window list can lag the Space change, so look again once it has settled.
-        fullScreenRecheck?.cancel()
-        fullScreenRecheck = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(500))
-            guard !Task.isCancelled else { return }
-            self?.refreshFullScreen()
-        }
-    }
-
-    @objc private func screensChanged(_ notification: Notification) {
-        guard let current = NSScreen.screens.first(where: { $0.displayID == screen.displayID }) else { return }
-        update(screen: ScreenGeometry(current))
-        refreshFullScreen()
-    }
-
-    private func refreshFullScreen() {
-        setFullScreen(FullScreenDetector.isFullScreen(displayID: screen.displayID))
-    }
 }
 
 /// What the notch's view draws. The outline is always the target; SwiftUI animates to it.
@@ -150,12 +116,20 @@ final class NotchModel {
 
 struct NotchRootView: View {
     let model: NotchModel
+    /// False for the first frame, so a new notch fades in.
+    @State private var hasAppeared: Bool
+
+    init(model: NotchModel, fadesIn: Bool = true) {
+        self.model = model
+        _hasAppeared = State(initialValue: !fadesIn)
+    }
 
     var body: some View {
         NotchShape(model.outline)
             .fill(Color.black)
-            .opacity(model.isHidden ? 0 : 1)
-            .animation(.linear(duration: Metrics.fullScreenFade), value: model.isHidden)
+            .opacity(model.isHidden || !hasAppeared ? 0 : 1)
+            .animation(.linear(duration: Metrics.fade), value: model.isHidden || !hasAppeared)
+            .onAppear { hasAppeared = true }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
     }

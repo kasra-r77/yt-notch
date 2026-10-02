@@ -23,10 +23,6 @@ enum FullScreenDetector {
         }
     }
 
-    static func isFullScreen(displayID: CGDirectDisplayID) -> Bool {
-        isFullScreen(display: CGDisplayBounds(displayID), windows: onScreenWindows(), ownPID: ProcessInfo.processInfo.processIdentifier)
-    }
-
     static func onScreenWindows() -> [WindowInfo] {
         let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
         return list.compactMap { entry in

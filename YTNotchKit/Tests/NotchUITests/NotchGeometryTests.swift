@@ -7,6 +7,7 @@ import Testing
 enum Displays {
     /// A 14-inch MacBook Pro at default scaling: 1512 × 982 with a 185 × 32 notch.
     static let macBookPro14 = ScreenGeometry(
+        displayID: 1, key: "built-in", name: "Built-in Retina Display", isBuiltIn: true,
         frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
         notch: CGRect(x: 663.5, y: 950, width: 185, height: 32),
         menuBarHeight: 32
@@ -14,6 +15,7 @@ enum Displays {
 
     /// A display without a notch to the right of it, with macOS 26's 30 pt menu bar.
     static let external = ScreenGeometry(
+        displayID: 2, key: "external", name: "Studio Display",
         frame: CGRect(x: 1512, y: 0, width: 1792, height: 1120),
         notch: nil,
         menuBarHeight: 30
@@ -21,6 +23,7 @@ enum Displays {
 
     /// A notch taller than the 32 the expanded heights are designed around.
     static let tallNotch = ScreenGeometry(
+        displayID: 3, key: "tall", isBuiltIn: true,
         frame: CGRect(x: 0, y: 0, width: 1728, height: 1117),
         notch: CGRect(x: 768, y: 1079, width: 192, height: 38),
         menuBarHeight: 38

@@ -42,7 +42,8 @@ enum Metrics {
     static let expandedBand: CGFloat = 32
     static let shadowRadius: CGFloat = 24
     static let shadowOffsetY: CGFloat = 8
-    static let fullScreenFade: Double = 0.15
+    /// A notch fades in when built and in or out for full screen.
+    static let fade: Double = 0.15
 }
 
 /// Where a display's panel goes. The panel never moves or resizes: it is large enough for

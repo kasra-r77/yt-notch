@@ -14,8 +14,8 @@ import WebPlayer
 struct YTNotchApp: App {
     @State private var store: PlayerStore
     private let webPlayer: WebPlayerController?
-    /// One notch for now, on the built-in or main display; N2.2 adds the rest.
-    private let notch: NotchPanel?
+    /// A notch on every display the "Show Notch On" setting chooses.
+    private let notches: NotchDisplayManager
 
     init() {
         if UserDefaults.standard.string(forKey: "engine") == "web" {
@@ -26,12 +26,12 @@ struct YTNotchApp: App {
             webPlayer = nil
             _store = State(initialValue: PlayerStore(engine: FakeEngine(runsClock: true)))
         }
-        notch = NotchPanel.onPreferredDisplay()
+        notches = NotchDisplayManager()
     }
 
     var body: some Scene {
         MenuBarExtra("YT Notch", systemImage: "music.note") {
-            PlayerMenu(store: store, webPlayer: webPlayer)
+            PlayerMenu(store: store, webPlayer: webPlayer, notches: notches)
         }
     }
 }

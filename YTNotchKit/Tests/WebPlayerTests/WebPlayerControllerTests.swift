@@ -95,6 +95,27 @@ struct WebPlayerControllerTests {
         #expect(window.isVisible)
     }
 
+    /// Display changes rebuild the notches (NotchDisplayManager) but must never reach the
+    /// player: macOS can't pull its window back on screen, and nothing reloads or pauses.
+    @Test func displayChangesLeaveThePlayerAlone() async throws {
+        let controller = WebPlayerController(configuration: try Self.fixture())
+        let store = PlayerStore(engine: controller)
+        try await eventually("ready") { store.state.health.status == .ok && store.state.track != nil }
+        store.play()
+        try await eventually("playing") { store.state.isPlaying }
+        let window = try #require(controller.webView.window)
+        let frame = window.frame
+        for screen in NSScreen.screens {
+            #expect(window.constrainFrameRect(frame, to: screen) == frame)
+        }
+
+        NotificationCenter.default.post(name: NSApplication.didChangeScreenParametersNotification, object: NSApplication.shared)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(window.frame == frame)
+        #expect(controller.loadAttempts == 1)
+        #expect(store.state.isPlaying)
+    }
+
     @Test func loadFailureIsOffline() async throws {
         var configuration = WebPlayerController.Configuration()
         configuration.page = .url(URL(string: "https://nothing-here.invalid/")!)

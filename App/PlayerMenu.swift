@@ -1,4 +1,5 @@
 import AppKit
+import NotchUI
 import PlayerCore
 import SwiftUI
 import WebPlayer
@@ -10,6 +11,7 @@ import WebPlayer
 struct PlayerMenu: View {
     let store: PlayerStore
     let webPlayer: WebPlayerController?
+    let notches: NotchDisplayManager
 
     var body: some View {
         let state = store.state
@@ -67,6 +69,9 @@ struct PlayerMenu: View {
         }
         .disabled(!state.showsQueueView || !state.isAvailable(.queue))
 
+        Divider()
+        NotchDisplaysMenu(notches: notches)
+
         if let webPlayer {
             Divider()
             // Until the full window (W3.3) exists, this is how to sign in and browse.
@@ -101,5 +106,43 @@ struct PlayerMenu: View {
 
     static var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+    }
+}
+
+/// The display setting until the Settings window exists: all displays, the built-in one, or
+/// a picked list. Each display is checked while it shows a notch; changing one turns the
+/// setting into a picked list, starting from the displays that show one now.
+private struct NotchDisplaysMenu: View {
+    let notches: NotchDisplayManager
+
+    var body: some View {
+        Menu("Show Notch On") {
+            Toggle("All Displays", isOn: Binding(
+                get: { notches.setting == .all },
+                set: { if $0 { notches.setting = .all } }
+            ))
+            Toggle("Built-in Display Only", isOn: Binding(
+                get: { notches.setting == .builtInOnly },
+                set: { if $0 { notches.setting = .builtInOnly } }
+            ))
+            Divider()
+            ForEach(notches.displays, id: \.key) { display in
+                Toggle(display.name, isOn: Binding(
+                    get: { notches.setting.includes(display) },
+                    set: { pick(display, $0) }
+                ))
+            }
+        }
+    }
+
+    private func pick(_ display: ScreenGeometry, _ isOn: Bool) {
+        var keys: Set<String>
+        if case let .picked(current) = notches.setting {
+            keys = current
+        } else {
+            keys = Set(notches.displays.filter(notches.setting.includes).map(\.key))
+        }
+        if isOn { keys.insert(display.key) } else { keys.remove(display.key) }
+        notches.setting = .picked(keys)
     }
 }

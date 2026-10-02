@@ -5,14 +5,25 @@ import AppKit
 /// `NSScreen.frame`.
 public struct ScreenGeometry: Equatable, Sendable {
     public var displayID: CGDirectDisplayID
+    /// Stays the same for a display across reconnects and restarts, unlike `displayID`:
+    /// what the display setting remembers.
+    public var key: String
+    public var name: String
+    public var isBuiltIn: Bool
     public var frame: CGRect
     /// The hardware notch, or nil on a display without one.
     public var notch: CGRect?
     /// The menu bar's height on this display.
     public var menuBarHeight: CGFloat
 
-    public init(displayID: CGDirectDisplayID = 0, frame: CGRect, notch: CGRect?, menuBarHeight: CGFloat) {
+    public init(
+        displayID: CGDirectDisplayID = 0, key: String? = nil, name: String = "Display", isBuiltIn: Bool = false,
+        frame: CGRect, notch: CGRect?, menuBarHeight: CGFloat
+    ) {
         self.displayID = displayID
+        self.key = key ?? "display-\(displayID)"
+        self.name = name
+        self.isBuiltIn = isBuiltIn
         self.frame = frame
         self.notch = notch
         self.menuBarHeight = menuBarHeight
@@ -24,6 +35,10 @@ public struct ScreenGeometry: Equatable, Sendable {
     public init(_ screen: NSScreen) {
         frame = screen.frame
         displayID = screen.displayID
+        key = CGDisplayCreateUUIDFromDisplayID(displayID).map { CFUUIDCreateString(nil, $0.takeRetainedValue()) as String }
+            ?? "display-\(displayID)"
+        name = screen.localizedName
+        isBuiltIn = CGDisplayIsBuiltin(displayID) != 0
         if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea, screen.safeAreaInsets.top > 0 {
             let height = screen.safeAreaInsets.top
             // The left area starts at the screen's left edge, so the notch starts where it ends.
@@ -52,6 +67,13 @@ public struct ScreenGeometry: Equatable, Sendable {
 
     /// The x the notch is centred on.
     var centreX: CGFloat { notch?.midX ?? frame.midX }
+
+    /// The frame in global display coordinates (origin at the top left of the primary
+    /// display, y down), as the window list reports windows. `primaryHeight` is the height
+    /// of the display at the origin.
+    func globalBounds(primaryHeight: CGFloat) -> CGRect {
+        CGRect(x: frame.minX, y: primaryHeight - frame.maxY, width: frame.width, height: frame.height)
+    }
 }
 
 extension NSScreen {
