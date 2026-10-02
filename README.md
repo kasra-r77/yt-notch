@@ -59,8 +59,6 @@ xcodegen generate
 xcodebuild -scheme YTNotch build
 ```
 
-To build the disk image a release ships, run `scripts/make-dmg.sh`; it writes `dist/YT-Notch-<version>.dmg`, laid out as D6 has it when `create-dmg` is installed (`brew install create-dmg`). Pushing a version tag such as `v0.1.0` makes the Release workflow build it and attach it to a GitHub release.
-
 The Xcode project is generated from `project.yml` and is not committed. The app is `YT Notch.app` under Xcode's DerivedData; open `YTNotch.xcodeproj` in Xcode to run it from there.
 
 ### Running a development build
@@ -80,6 +78,31 @@ The app logs to the system log under one subsystem. To watch what the web player
 ```bash
 log stream --level info --predicate 'subsystem == "io.github.kasra-r77.ytnotch"'
 ```
+
+### Releases and updates
+
+To build the disk image a release ships, run `scripts/make-dmg.sh`; it writes `dist/YT-Notch-<version>.dmg`, laid out as D6 has it when `create-dmg` is installed (`brew install create-dmg`). Pushing a version tag such as `v0.1.0` makes the Release workflow build it and attach it to a GitHub release.
+
+Updates come through [Sparkle](https://sparkle-project.org). The app reads `appcast.xml` from the latest release once a day, and Check for Updates… in its menu checks at once. The update check stays off until the update key exists. To set it up, once (the tools arrive with the first `scripts/make-dmg.sh` run):
+
+1. Make the key pair. Sparkle keeps the private key in your login keychain and prints the public key:
+
+   ```bash
+   build/release/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys
+   ```
+
+2. Put the public key in `project.yml` as `SUPublicEDKey` and commit it.
+3. Give the private key to the Release workflow, then delete the exported copy:
+
+   ```bash
+   build/release/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys -x sparkle-key.txt
+   gh secret set SPARKLE_PRIVATE_KEY < sparkle-key.txt
+   rm sparkle-key.txt
+   ```
+
+4. Keep a backup of the private key, for example in your password manager. Without it, installed copies can't take another update.
+
+For each release, raise `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml` (Sparkle compares the build number), then push the tag `v<version>`. The release gets a signed `appcast.xml` beside the image, and installed copies find it within a day.
 
 ## Test
 

@@ -13,6 +13,7 @@ struct AppMenu: View {
     let openWindow: (@MainActor (_ signIn: Bool) -> Void)?
     let retry: (@MainActor () -> Void)?
     let engineName: String
+    let updater: Updater
 
     @Environment(\.openSettings) private var openSettings
     @State private var copied = false
@@ -43,6 +44,15 @@ struct AppMenu: View {
         }
         .keyboardShortcut(",")
         Divider()
+        if updater.isEnabled {
+            Button { updater.checkForUpdates() } label: {
+                if updater.updateWaiting {
+                    Text("Update Available…").fontWeight(.semibold)
+                } else {
+                    Text("Check for Updates…")
+                }
+            }
+        }
         Button(copied ? "Copied" : "Copy Diagnostics") { copyDiagnostics() }
         #if DEBUG
         Divider()

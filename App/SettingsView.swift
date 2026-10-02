@@ -5,14 +5,19 @@ import ServiceManagement
 import SwiftUI
 
 /// The Settings window (design spec D7): a standard macOS settings window, 520 wide, whose
-/// changes apply at once. Updates join General and About with the update check (R5.2).
+/// changes apply at once. The Updates pane shows once the update check is set up (R5.2).
 struct SettingsView: View {
     let notches: NotchDisplayManager
+    let updater: Updater
 
     var body: some View {
         TabView {
             GeneralPane(notches: notches)
                 .tabItem { Label("General", systemImage: "gearshape") }
+            if updater.isEnabled {
+                UpdatesPane(updater: updater)
+                    .tabItem { Label("Updates", systemImage: "arrow.down.circle") }
+            }
             AboutPane()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
@@ -112,8 +117,43 @@ enum LoginItem {
     }
 }
 
+/// Checking for updates: automatically once a day, or now.
+private struct UpdatesPane: View {
+    let updater: Updater
+    @State private var checksAutomatically = true
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Check for updates automatically", isOn: Binding(get: { checksAutomatically }, set: { setAutomatic($0) }))
+                HStack {
+                    Text(lastCheckedText)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Check Now") { updater.checkForUpdates() }
+                }
+                Text("YT Notch \(AboutPane.version) (\(AboutPane.build))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { checksAutomatically = updater.checksAutomatically }
+    }
+
+    private var lastCheckedText: String {
+        guard let date = updater.lastChecked else { return "Not checked yet" }
+        return "Last checked \(date.formatted(date: .abbreviated, time: .shortened))"
+    }
+
+    private func setAutomatic(_ isOn: Bool) {
+        updater.checksAutomatically = isOn
+        checksAutomatically = updater.checksAutomatically
+    }
+}
+
 /// The app, its version, what it is, and that it is unofficial.
-private struct AboutPane: View {
+struct AboutPane: View {
     static let repository = URL(string: "https://github.com/kasra-r77/yt-notch")!
 
     var body: some View {

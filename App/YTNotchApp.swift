@@ -19,6 +19,8 @@ struct YTNotchApp: App {
     private let openWindow: (@MainActor (Bool) -> Void)?
     private let retry: @MainActor () -> Void
     private let engineName: String
+    /// The update check, once the update keys exist (R5.2).
+    private let updater = Updater()
 
     init() {
         let store: PlayerStore
@@ -49,14 +51,14 @@ struct YTNotchApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            AppMenu(store: store, notches: notches, openWindow: openWindow, retry: retry, engineName: engineName)
+            AppMenu(store: store, notches: notches, openWindow: openWindow, retry: retry, engineName: engineName, updater: updater)
         } label: {
             // D6's template icon, with its dot while something needs the user.
             Image(store.state.health.status.needsAttention ? "MenuBarIconAttention" : "MenuBarIcon")
                 .accessibilityLabel("YT Notch")
         }
         Settings {
-            SettingsView(notches: notches)
+            SettingsView(notches: notches, updater: updater)
         }
     }
 }

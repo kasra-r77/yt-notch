@@ -24,6 +24,10 @@ settings:
 packages:
   YTNotchKit:
     path: YTNotchKit
+  # The update check (R5.2). MIT licensed; the app target only.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
 
 targets:
   YTNotch:
@@ -40,6 +44,7 @@ targets:
         product: NotchUI
       - package: YTNotchKit
         product: SystemMedia
+      - package: Sparkle
     info:
       path: App/Info.plist
       properties:
@@ -51,6 +56,13 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         LSUIElement: true
         NSHumanReadableCopyright: Copyright © 2026 Kasra Rismanchi. MIT License.
+        # Sparkle: the feed every release publishes, a daily check, and the public half of
+        # the update signing key. Empty until the owner makes the keys (README, "Updates");
+        # until then the app doesn't start the updater.
+        SUFeedURL: https://github.com/kasra-r77/yt-notch/releases/latest/download/appcast.xml
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
+        SUPublicEDKey: ""
     settings:
       base:
         PRODUCT_NAME: YT Notch

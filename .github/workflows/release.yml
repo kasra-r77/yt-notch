@@ -4,6 +4,9 @@ name: Release
 # it to a GitHub release. The app is signed ad hoc and not notarised: there is no Developer ID
 # yet (see docs/decisions.md). Pull requests that change the release itself build the image
 # too, without releasing it, so a broken release is caught before a tag.
+#
+# Once the update key exists (the SPARKLE_PRIVATE_KEY secret, README "Updates"), a tag also
+# gets a signed update feed, appcast.xml, on its release; the app reads the latest one.
 
 on:
   push:
@@ -11,6 +14,7 @@ on:
   pull_request:
     paths:
       - scripts/make-dmg.sh
+      - scripts/make-appcast.sh
       - .github/workflows/release.yml
       - docs/design/brand/dmg-background*.png
   workflow_dispatch:
@@ -44,11 +48,25 @@ jobs:
           path: ${{ env.dmg }}
           if-no-files-found: error
 
+      - name: Look for the update key
+        id: update-key
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: echo "present=$([[ -n "$SPARKLE_PRIVATE_KEY" ]] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+
+      - name: Make the update feed
+        if: startsWith(github.ref, 'refs/tags/v') && steps.update-key.outputs.present == 'yes'
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: scripts/make-appcast.sh "$dmg" "$GITHUB_REF_NAME"
+
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$dmg" \
+          files=("$dmg")
+          if [[ -f dist/appcast.xml ]]; then files+=(dist/appcast.xml); fi
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" \
             --title "YT Notch ${GITHUB_REF_NAME#v}" \
             --generate-notes
