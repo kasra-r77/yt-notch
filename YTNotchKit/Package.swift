@@ -18,6 +18,7 @@ let package = Package(
         .target(name: "WebPlayer", dependencies: ["PlayerCore"]),
         .target(name: "NotchUI", dependencies: ["PlayerCore"]),
         .target(name: "SystemMedia", dependencies: ["PlayerCore"]),
+        .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore"]),
         .testTarget(name: "ArchitectureTests"),
     ]
 )

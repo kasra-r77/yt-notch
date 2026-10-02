@@ -1,0 +1,136 @@
+import Foundation
+
+/// A track as the bridge reports it.
+public struct Track: Equatable, Sendable, Identifiable {
+    public var id: String
+    public var title: String
+    public var artist: String
+    public var album: String?
+    public var artworkURL: URL?
+    /// In seconds; nil while the site does not know it yet.
+    public var duration: TimeInterval?
+
+    public init(
+        id: String,
+        title: String,
+        artist: String,
+        album: String? = nil,
+        artworkURL: URL? = nil,
+        duration: TimeInterval? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.artist = artist
+        self.album = album
+        self.artworkURL = artworkURL
+        self.duration = duration
+    }
+}
+
+/// A playlist from the user's library. The site exposes no thumbnail for most playlists
+/// (spike report, S0.4), so `thumbnailURL` is usually nil.
+public struct PlaylistItem: Equatable, Sendable, Identifiable {
+    public var id: String
+    public var title: String
+    public var thumbnailURL: URL?
+
+    public init(id: String, title: String, thumbnailURL: URL? = nil) {
+        self.id = id
+        self.title = title
+        self.thumbnailURL = thumbnailURL
+    }
+}
+
+/// One entry in the queue, in queue order.
+public struct QueueItem: Equatable, Sendable, Identifiable {
+    public var index: Int
+    public var title: String
+    public var artist: String
+    public var isCurrent: Bool
+
+    public var id: Int { index }
+
+    public init(index: Int, title: String, artist: String, isCurrent: Bool) {
+        self.index = index
+        self.title = title
+        self.artist = artist
+        self.isCurrent = isCurrent
+    }
+}
+
+public enum RepeatMode: String, Equatable, Sendable, CaseIterable {
+    case off, all, one
+
+    /// The mode after this one, in the order the site's repeat button cycles.
+    public var next: RepeatMode {
+        switch self {
+        case .off: .all
+        case .all: .one
+        case .one: .off
+        }
+    }
+}
+
+/// A part of the player the bridge can report as missing. A missing feature's controls are
+/// dimmed and its commands are not sent. Raw values are the names the bridge uses.
+public enum Feature: String, Hashable, Sendable, CaseIterable {
+    case playPause
+    case next
+    case previous
+    case seek
+    case like
+    case shuffle
+    case repeatMode = "repeat"
+    case playlists
+    case queue
+}
+
+public struct Health: Equatable, Sendable {
+    public enum Status: Equatable, Sendable {
+        /// The page has not reported ready yet.
+        case starting
+        case ok
+        /// The page shows its sign-in prompt.
+        case signedOut
+        /// The page failed to load, or the network is gone.
+        case offline
+        /// Recovery gave up. No commands are sent until the page reports ready again.
+        case bridgeBroken
+    }
+
+    public var status: Status
+    /// Parts of the page the bridge could not find. Their controls are dimmed.
+    public var missing: Set<Feature>
+
+    public init(status: Status = .starting, missing: Set<Feature> = []) {
+        self.status = status
+        self.missing = missing
+    }
+}
+
+/// The bridge's `state` message: what is playing and where.
+public struct PlaybackSnapshot: Equatable, Sendable {
+    public var track: Track?
+    /// Seconds into the track.
+    public var position: TimeInterval
+    public var isPlaying: Bool
+    public var canNext: Bool
+    public var canPrevious: Bool
+    public var liked: Bool
+
+    public init(
+        track: Track?,
+        position: TimeInterval = 0,
+        isPlaying: Bool = false,
+        canNext: Bool = false,
+        canPrevious: Bool = false,
+        liked: Bool = false
+    ) {
+        self.track = track
+        self.position = position
+        self.isPlaying = isPlaying
+        self.canNext = canNext
+        self.canPrevious = canPrevious
+        self.liked = liked
+    }
+}
