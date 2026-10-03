@@ -60,7 +60,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          files=("$dmg")
+          # The README's Download button points at releases/latest/download/YT-Notch.dmg,
+          # which needs the same file name in every release.
+          cp "$dmg" dist/YT-Notch.dmg
+          files=("$dmg" dist/YT-Notch.dmg)
           if [[ -f dist/appcast.xml ]]; then files+=(dist/appcast.xml); fi
           # A release made on GitHub's website already exists by the time this runs.
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then

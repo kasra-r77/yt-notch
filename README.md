@@ -1,8 +1,29 @@
-# YT Notch
+<p align="center">
+  <img src="App/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="YT Notch icon">
+</p>
+
+<h1 align="center">YT Notch</h1>
+
+<p align="center">A YouTube Music player for your Mac's notch.</p>
+
+<p align="center">
+  <a href="https://github.com/kasra-r77/yt-notch/releases/latest/download/YT-Notch.dmg"><img src="https://img.shields.io/badge/Download-for%20macOS-black?logo=apple&logoColor=white&style=for-the-badge" alt="Download for macOS"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/kasra-r77/yt-notch/releases/latest"><img src="https://img.shields.io/github/v/release/kasra-r77/yt-notch?label=latest" alt="Latest version"></a>
+  <a href="https://github.com/kasra-r77/yt-notch/releases"><img src="https://img.shields.io/github/downloads/kasra-r77/yt-notch/total?label=downloads" alt="Total downloads"></a>
+</p>
 
 ![YT Notch: the Playing view open in a MacBook's notch](docs/images/hero.png)
 
 A free, open-source Mac app that turns the notch into a YouTube Music player. Hover the notch to see what's playing, skip songs, start a playlist or jump ahead in Up next. On a Mac without a notch, it draws a small pill at the top of the screen instead.
+
+- **Hover the notch** to see what's playing and use the controls.
+- **Playlists and Up next** start a playlist or jump to a song without opening a window.
+- **No notch? No problem.** A small pill at the top of the screen does the same job.
+- **Works like any music app** with media keys, headphone buttons and Control Centre.
+- **Free and open source,** with no ad blocking, no downloading and no analytics.
 
 > **Unofficial.** Not affiliated with, endorsed by or sponsored by Google or YouTube. YouTube Music is a trademark of Google LLC.
 
@@ -12,11 +33,14 @@ YT Notch plays the real YouTube Music website in a window of its own, signed in 
 
 ## Install
 
-1. Download the latest `.dmg` from [Releases](https://github.com/kasra-r77/yt-notch/releases).
+1. [Download the latest `.dmg`](https://github.com/kasra-r77/yt-notch/releases/latest/download/YT-Notch.dmg). Older versions are on the [Releases page](https://github.com/kasra-r77/yt-notch/releases).
 2. Open it and drag **YT Notch** to **Applications**.
 3. Open YT Notch from Applications.
 
-### "Apple could not verify YT Notch…"
+Requires macOS 14 or later, on Apple silicon or Intel.
+
+<details>
+<summary><b>"Apple could not verify YT Notch…"</b> (what to do the first time you open it)</summary>
 
 The first time you open it, macOS stops YT Notch with this message. Apple only vouches for apps from developers in its paid program, and YT Notch is a free app outside it. The code is all here to read or build yourself. To open it:
 
@@ -34,7 +58,7 @@ You only do this once; updates open without asking. If you prefer Terminal, this
 xattr -dr com.apple.quarantine "/Applications/YT Notch.app"
 ```
 
-Requires macOS 14 or later, on Apple silicon or Intel.
+</details>
 
 ## Get started
 
