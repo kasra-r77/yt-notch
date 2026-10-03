@@ -36,7 +36,7 @@ Most fixes for a change on YouTube Music's side belong in the `PAGE` table at th
 
 ## Releases and updates
 
-`scripts/make-dmg.sh` builds the disk image into `dist/` (`brew install create-dmg` for the styled window). Pushing a tag such as `v0.1.0` makes the Release workflow build it and publish a GitHub release. For each release, raise `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml` first.
+`scripts/make-dmg.sh` builds the disk image into `dist/` (`brew install create-dmg` for the styled window). Pushing a tag such as `v0.1.0` makes the Release workflow build it and publish a GitHub release. The release carries the image twice, as `YT-Notch-<version>.dmg` and as `YT-Notch.dmg`, which the README's Download button links to. For each release, raise `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml` first.
 
 Updates come through [Sparkle](https://sparkle-project.org), and stay off until the update key exists. To set it up once, after a first `scripts/make-dmg.sh` run:
 
